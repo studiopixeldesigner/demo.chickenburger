@@ -8,9 +8,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { IS_DEMO, useDemoOuvert } from '@/lib/demo';
 
-// ==========================================
-// TYPES & INTERFACES
-// ==========================================
 interface Product {
   id: string;
   name: string;
@@ -130,7 +127,6 @@ export default function PageCommander() {
   }, [cart]);
 
   useEffect(() => {
-    // En démo, c'est le visiteur qui choisit l'état du restaurant (bandeau en bas de page)
     if (IS_DEMO) return;
 
     async function checkStatus() {
@@ -513,7 +509,6 @@ export default function PageCommander() {
     try {
       let orderNumberFormatted = '';
 
-      // En démo, la commande est simulée : rien n'est envoyé au restaurant
       if (!IS_DEMO) {
         const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
         const nextNum = (count || 0) + 1;
@@ -568,7 +563,6 @@ export default function PageCommander() {
   return (
     <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex flex-col justify-between selection:bg-emerald-500 selection:text-white relative overflow-hidden">
       <div>
-        {/* HEADER HARMONISÉ FIXE */}
         <header className="fixed top-0 left-0 right-0 z-40 bg-[#372D26]/95 backdrop-blur-md border-b border-[#59493E] flex items-center justify-between px-6 py-4 shadow-md">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-110 transition duration-300">
@@ -584,13 +578,11 @@ export default function PageCommander() {
           </button>
         </header>
 
-        {/* HERO / TITRE */}
         <div className="max-w-6xl mx-auto px-4 pt-28 pb-4 text-center">
           <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight mb-3 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-rose-400 to-amber-400">Notre Carte & Menus</h1>
           <p className="text-[#F5F0E8] text-sm">Faites votre choix et personnalisez votre commande en un clic</p>
         </div>
 
-        {/* NAVIGATION RAPIDE PAR CATÉGORIE */}
         {!loading && categories.length > 0 && (
           <div className="max-w-6xl mx-auto px-4 mb-8">
             <div className="md:hidden">
@@ -636,7 +628,6 @@ export default function PageCommander() {
           </div>
         )}
 
-        {/* CATALOGUE PRODUITS */}
         <section className="max-w-6xl mx-auto px-4 space-y-16 pb-16">
           {loading ? (
             <div className="text-center py-20 text-emerald-400 font-bold">Chargement...</div>
@@ -689,7 +680,6 @@ export default function PageCommander() {
         </section>
       </div>
 
-      {/* FOOTER HARMONISÉ */}
       <footer className="bg-[#332922] border-t border-[#59493E] pt-16 pb-12 text-[#E2D8CC] text-sm relative z-20">
         <div className="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-4 mb-12 text-left">
           <div>
@@ -741,7 +731,6 @@ export default function PageCommander() {
         </div>
       </footer>
 
-      {/* MODAL CONFIGURATION PRODUIT */}
       {articleActif && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
           <div className="bg-[#372D26] border border-[#59493E] w-full max-w-lg sm:rounded-3xl rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
@@ -1025,7 +1014,6 @@ export default function PageCommander() {
         </div>
       )}
 
-      {/* PANIER SLIDE-OVER */}
       {isCartOpen && (
         <div onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-end">
           <div onClick={(e) => e.stopPropagation()} className="bg-[#372D26] border-l border-[#59493E] w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto">
@@ -1130,7 +1118,6 @@ export default function PageCommander() {
         </div>
       )}
 
-      {/* MODAL SUCCÈS COMMANDE */}
       {orderSuccessModal.isOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-[#372D26] border border-[#59493E] w-full max-w-sm rounded-3xl p-6 text-center space-y-5 shadow-2xl">

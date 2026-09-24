@@ -20,7 +20,6 @@ export async function toggleStockAction(id: string, inStock: boolean) {
 export async function toggleOptionStockAction(id: string, inStock: boolean) {
   await verifyAuth();
 
-  // 1. Récupérer le nom de l'option ciblée
   const { data: currentOption, error: fetchError } = await supabaseAdmin
     .from('options')
     .select('name')
@@ -31,7 +30,6 @@ export async function toggleOptionStockAction(id: string, inStock: boolean) {
     throw new Error(fetchError?.message || "Option introuvable");
   }
 
-  // 2. Mettre à jour toutes les options ayant le même nom
   const { error: updateError } = await supabaseAdmin
     .from('options')
     .update({ inStock })

@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from 'react';
 
-// Version démo (GitHub Pages) : aucune commande n'est envoyée et c'est le visiteur
-// qui choisit si le restaurant est ouvert ou fermé, sans passer par Supabase.
 export const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 const STORAGE_KEY = 'demo_restaurant_ouvert';

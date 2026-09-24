@@ -13,9 +13,7 @@ export default function VitrineClient() {
   const [isForceOpenMode, setIsForceOpenMode] = useState(false);
   const demoOuvert = useDemoOuvert();
 
-  // Vérification combinée : Mode Vacances / Mode Ouverture Forcée (Supabase) + Horaires [cite: 9]
   useEffect(() => {
-    // En démo, c'est le visiteur qui choisit l'état du restaurant (bandeau en bas de page)
     if (IS_DEMO) return;
 
     const verifierStatutGlobal = async () => {
@@ -51,16 +49,16 @@ export default function VitrineClient() {
         let statut = "Fermé actuellement";
 
         switch (jour) {
-          case 2: // Mardi : Fermé [cite: 9]
+          case 2:
             ouvert = false;
             statut = "Restaurant Fermé (Impossible de commander)";
             break;
-          case 3: // Mercredi [cite: 9]
+          case 3:
             ouvert = heureDecimale >= 18.0 && heureDecimale < 21.75;
             statut = ouvert ? "Ouvert • Commandes en ligne actives" : "Restaurant Fermé (Impossible de commander)";
             break;
-          case 4: // Jeudi [cite: 9]
-          case 5: // Vendredi [cite: 9]
+          case 4:
+          case 5:
             if ((heureDecimale >= 11.5 && heureDecimale < 13.75) || (heureDecimale >= 18.5 && heureDecimale < 21.75)) {
               ouvert = true;
               statut = "Restaurant ouvert • Commandes actives";
@@ -68,15 +66,15 @@ export default function VitrineClient() {
               statut = "Restaurant Fermé (Impossible de commander)";
             }
             break;
-          case 6: // Samedi [cite: 9]
+          case 6:
             ouvert = heureDecimale >= 18.5 && heureDecimale < 21.75;
             statut = ouvert ? "Ouvert • Commandes en ligne actives" : "Restaurant Fermé (Impossible de commander)";
             break;
-          case 0: // Dimanche [cite: 9]
+          case 0:
             ouvert = heureDecimale >= 18.0 && heureDecimale < 21.75;
             statut = ouvert ? "Ouvert • Commandes en ligne actives" : "Restaurant Fermé (Impossible de commander)";
             break;
-          case 1: // Lundi [cite: 9]
+          case 1:
             ouvert = heureDecimale >= 18.5 && heureDecimale < 21.75;
             statut = ouvert ? "Ouvert • Commandes en ligne actives" : "Restaurant Fermé (Impossible de commander)";
             break;
@@ -105,7 +103,6 @@ export default function VitrineClient() {
   return (
     <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] selection:bg-orange-500 selection:text-white overflow-x-hidden flex flex-col justify-between pt-24">
       <div>
-        {/* Barre d'état dynamique */}
         <div className={`text-white text-xs font-bold px-4 py-2.5 text-center uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg fixed top-0 left-0 right-0 z-50 transition-colors duration-500 ${
           isVacationMode 
             ? "bg-purple-600 shadow-purple-900/20" 
@@ -119,7 +116,6 @@ export default function VitrineClient() {
           {texteBarre}
         </div>
 
-        {/* Header fixe avec le numéro de téléphone à la place du panier */}
         <header className="bg-[#372D26]/90 backdrop-blur-md border-b border-[#59493E] p-4 fixed top-9 left-0 right-0 z-40 flex justify-between items-center px-6 transition-all duration-300 shadow-md">
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
             <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-orange-500 shadow-lg shadow-orange-500/20 transform group-hover:scale-110 transition duration-300">
@@ -130,7 +126,6 @@ export default function VitrineClient() {
             </span>
           </Link>
 
-          {/* Remplacement du panier par le téléphone du restaurant */}
           <a 
             href="tel:0363751530"
             className="bg-[#4E3F35] hover:bg-[#5E4C40] text-white px-5 py-2.5 rounded-full font-bold text-sm border border-[#6B5749] transition duration-300 flex items-center gap-2.5 shadow-md hover:scale-105 active:scale-95"
@@ -139,7 +134,6 @@ export default function VitrineClient() {
           </a>
         </header>
 
-        {/* Hero Section */}
         <section className="relative h-[75vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden mt-6">
           <div className="absolute inset-0 z-0">
             <Image 
@@ -188,7 +182,6 @@ export default function VitrineClient() {
         </section>
       </div>
 
-        {/* FOOTER */}
       <footer className="bg-[#332922] border-t border-[#59493E] pt-16 pb-12 text-[#E2D8CC] text-sm">
         <div className="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-4 mb-12 text-left">
           

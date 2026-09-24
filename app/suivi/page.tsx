@@ -8,14 +8,13 @@ import { supabase } from '@/lib/supabase';
 import { IS_DEMO } from '@/lib/demo';
 
 interface OrderTrack {
-  id: string; // ID formaté (CMD-001...)
+  id: string;
   customerName: string;
   phone: string;
   status: 'en_preparation' | 'prete';
   items: { name: string; quantity: number; [key: string]: any }[];
 }
 
-// 1. Fonction de formatage propre des noms (identique à l'admin)
 function formatTabName(rawKey: string): string {
   const key = rawKey.toLowerCase().trim();
 
@@ -46,7 +45,6 @@ function formatTabName(rawKey: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-// 2. Fonction de formatage des valeurs (Oui/Non, objets, tableaux)
 function formatOptionValue(value: any): string {
   if (value === null || value === undefined || value === '' || value === false) return '';
 
@@ -90,7 +88,6 @@ function SuiviContent() {
     setSearched(true);
     setOrder(null);
 
-    // En démo, aucune vraie commande n'est passée : on n'interroge pas Supabase
     if (IS_DEMO) return;
 
     setLoading(true);
@@ -149,7 +146,6 @@ function SuiviContent() {
     performSearch(searchQuery);
   };
 
-  // 3. Extraction propre des options dynamiques avec filtrage technique
   const getDynamicItemDetails = (item: any) => {
   const ignoredKeys = [
     'name', 'quantity', 'price', 'finalprice', 'id', 'image', 'category', 'total',
@@ -191,7 +187,6 @@ function SuiviContent() {
   return (
     <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
       <div>
-        {/* Header */}
         <header className="bg-[#372D26]/90 backdrop-blur-md border-b border-[#59493E] p-4 sticky top-0 z-40 flex justify-between items-center px-6 shadow-md">
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
             <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-110 transition duration-300">
@@ -206,7 +201,6 @@ function SuiviContent() {
           </Link>
         </header>
 
-        {/* Titre */}
         <section className="max-w-xl mx-auto px-6 pt-16 pb-8 text-center">
           <span className="inline-block bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4 shadow-sm backdrop-blur-md">
             Temps réel
@@ -219,7 +213,6 @@ function SuiviContent() {
           </p>
         </section>
 
-        {/* Formulaire de recherche */}
         <div className="max-w-md mx-auto px-6 mb-12">
           <form onSubmit={handleSearch} className="flex gap-2">
             <input 
@@ -240,7 +233,6 @@ function SuiviContent() {
           </form>
         </div>
 
-        {/* Résultat du suivi */}
         {searched && (
           <div className="max-w-md mx-auto px-6">
             {order ? (
@@ -251,7 +243,6 @@ function SuiviContent() {
                   <p className="text-sm text-white font-semibold">Client : {order.customerName}</p>
                 </div>
 
-                {/* Indicateur de statut visuel */}
                 <div className="py-4 border-y border-[#59493E] flex flex-col items-center justify-center space-y-3">
                   {order.status === 'en_preparation' ? (
                     <div className="bg-amber-500/10 border border-amber-500/35 text-amber-300 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 animate-pulse">
@@ -264,7 +255,6 @@ function SuiviContent() {
                   )}
                 </div>
 
-                {/* Détails */}
                 <div className="text-left space-y-2">
                   <h4 className="text-xs font-bold text-[#CBC0B4] uppercase tracking-wider">Récapitulatif :</h4>
                   <ul className="space-y-3 text-sm text-[#F5F0E8] bg-[#4E3F35]/50 p-4 rounded-xl border border-[#59493E]">
@@ -299,7 +289,6 @@ function SuiviContent() {
         )}
       </div>
 
-      {/* Footer simple */}
       <footer className="bg-[#332922] border-t border-[#59493E] py-6 text-center text-xs text-[#B8ABA0] mt-16 relative z-20">
         <p>© 2026 Chicken Burger Lure — 34 Rue de la Gare</p>
       </footer>

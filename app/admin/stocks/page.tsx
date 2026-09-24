@@ -710,7 +710,6 @@ export default function AdminStocksPage() {
         )}
       </div>
 
-      {/* MODAL AJOUT / MODIFICATION TYPE D'OPTION */}
       {isOptionTypeModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -737,7 +736,6 @@ export default function AdminStocksPage() {
         </div>
       )}
 
-      {/* MODAL CATEGORIE PRODUIT */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -756,7 +754,6 @@ export default function AdminStocksPage() {
         </div>
       )}
 
-      {/* MODAL PRODUIT */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 w-full max-w-3xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -1065,7 +1062,6 @@ export default function AdminStocksPage() {
         </div>
       )}
 
-      {/* MODAL OPTION */}
       {isOptionModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">

@@ -18,7 +18,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Valeurs publiques (elles finissent dans le JS du site) : secrets ou variables du dépôt
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     steps:
@@ -41,14 +40,11 @@ jobs:
 
       - run: npm ci
 
-      # L'admin repose sur des Server Actions et des cookies, impossibles sans serveur :
-      # on le retire de la version démo (il reste fonctionnel en local avec `npm run dev`).
       - run: rm -rf app/admin app/actions
 
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'
-          # Bandeau démo, état ouvert/fermé choisi par le visiteur, commandes simulées
           NEXT_PUBLIC_DEMO_MODE: 'true'
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
 

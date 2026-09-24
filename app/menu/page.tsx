@@ -30,7 +30,6 @@ export default function MenuPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Animation des émojis
   useEffect(() => {
     const list = ['🍔', '🌮', '🍟', '🥤', '🍗', '🍚'];
     const generated: FallingEmoji[] = [];
@@ -47,11 +46,9 @@ export default function MenuPage() {
     setEmojis(generated);
   }, []);
 
-  // Récupération des produits et synchronisation des catégories réelles
   useEffect(() => {
     async function fetchData() {
       try {
-        // 1. Récupérer les produits en gérant la casse du stock
         const { data: prodData, error: prodError } = await supabase
           .from('products')
           .select('*, categories(name)');
@@ -77,19 +74,16 @@ export default function MenuPage() {
           setProducts(formattedProducts);
         }
 
-        // 2. Récupérer les catégories de la table `categories` si elle existe
         const { data: catData, error: catError } = await supabase
           .from('categories')
           .select('name')
           .order('position', { ascending: true, nullsFirst: false })
           .order('name');
 
-        // Extraire les catégories réellement utilisées par les produits
         const productCategories = Array.from(new Set(formattedProducts.map(p => p.category)));
 
         if (!catError && catData && catData.length > 0) {
           const orderedCatNames = catData.map((c: any) => c.name);
-          // Fusionner l'ordre de la table `categories` avec les catégories présentes dans les produits
           const merged = [
             ...orderedCatNames.filter(cat => productCategories.includes(cat)),
             ...productCategories.filter(cat => !orderedCatNames.includes(cat))
@@ -121,7 +115,6 @@ export default function MenuPage() {
         .falling-item { position: absolute; top: -50px; animation: fall linear infinite; }
       `}</style>
 
-      {/* Pluie d'émojis */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {emojis.map((item) => (
           <span
@@ -141,7 +134,6 @@ export default function MenuPage() {
 
       <div className="relative z-10 flex flex-col justify-between min-h-screen">
         <div>
-          {/* Header */}
           <header className="bg-[#372D26]/90 backdrop-blur-md border-b border-[#59493E] p-4 sticky top-0 z-40 flex justify-between items-center px-6 shadow-md">
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
               <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-110 transition duration-300">
@@ -160,7 +152,6 @@ export default function MenuPage() {
             </Link>
           </header>
 
-          {/* Titre */}
           <section className="max-w-5xl mx-auto px-6 pt-16 pb-10 text-center">
             <span className="inline-block bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4 shadow-sm backdrop-blur-md">
               🍽️ Notre Carte
@@ -173,7 +164,6 @@ export default function MenuPage() {
             </p>
           </section>
 
-          {/* Affichage dynamique des produits par catégorie */}
           <div className="max-w-5xl mx-auto px-6 space-y-16 pb-16">
             {loading ? (
               <div className="text-center py-20 text-emerald-400 font-bold">Chargement du menu en cours...</div>
@@ -196,7 +186,6 @@ export default function MenuPage() {
                           key={product.id}
                           className={`bg-[#372D26]/90 backdrop-blur-sm border border-[#59493E] p-5 rounded-2xl flex flex-col justify-between hover:border-emerald-500/50 transition duration-300 shadow-xl relative overflow-hidden group ${!product.inStock ? 'opacity-80' : ''}`}
                         >
-                          {/* Image de fond en filigrane */}
                           {product.imageUrl && (
                             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none transform group-hover:scale-105 transition duration-500">
                               <Image 
@@ -208,7 +197,6 @@ export default function MenuPage() {
                             </div>
                           )}
 
-                          {/* Contenu textuel */}
                           <div className="relative z-10">
                             <div className="flex justify-between items-start mb-2">
                               <h3 className="font-bold text-lg text-white">{product.name}</h3>
@@ -241,7 +229,6 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {/* FOOTER */}
         <footer className="bg-[#332922] border-t border-[#59493E] pt-16 pb-12 text-[#E2D8CC] text-sm relative z-20">
           <div className="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-4 mb-12 text-left">
             <div>

@@ -17,7 +17,6 @@ export default function MentionsLegalesPage() {
   const [emojis, setEmojis] = useState<FallingEmoji[]>([]);
 
   useEffect(() => {
-    // Liste axée sur le thème juridique, bloc-notes, crayons, documents
     const list = ['📝', '📄', '🖊️', '✏️', '📋', '⚖️'];
     const generated: FallingEmoji[] = [];
 
@@ -37,7 +36,6 @@ export default function MentionsLegalesPage() {
   return (
     <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] selection:bg-emerald-500 selection:text-white flex flex-col justify-between relative overflow-hidden">
       
-      {/* Styles pour l'animation de pluie continue */}
       <style jsx>{`
         @keyframes fall {
           0% {
@@ -62,7 +60,6 @@ export default function MentionsLegalesPage() {
         }
       `}</style>
 
-      {/* Pluie d'émojis en continu en arrière-plan */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {emojis.map((item) => (
           <span
@@ -82,7 +79,6 @@ export default function MentionsLegalesPage() {
 
       <div className="relative z-10 flex flex-col justify-between min-h-screen">
         <div>
-          {/* Header fixe minimaliste */}
           <header className="bg-[#372D26]/90 backdrop-blur-md border-b border-[#59493E] p-4 sticky top-0 z-40 flex justify-between items-center px-6 shadow-md">
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
               <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-115 transition duration-300">
@@ -101,7 +97,6 @@ export default function MentionsLegalesPage() {
             </Link>
           </header>
 
-          {/* Titre de la page */}
           <section className="max-w-4xl mx-auto px-6 pt-16 pb-10 text-center">
             <span className="inline-block bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4 shadow-sm backdrop-blur-md">
               Informations Légales
@@ -114,7 +109,6 @@ export default function MentionsLegalesPage() {
             </p>
           </section>
 
-          {/* Contenu principal des mentions légales */}
           <div className="max-w-4xl mx-auto px-6 space-y-8 pb-16">
             
             <div className="bg-[#372D26]/90 backdrop-blur-sm border border-[#59493E] p-6 sm:p-8 rounded-3xl shadow-xl space-y-4">
@@ -160,11 +154,9 @@ export default function MentionsLegalesPage() {
           </div>
         </div>
 
-        {/* FOOTER */}
         <footer className="bg-[#332922] border-t border-[#59493E] pt-16 pb-12 text-[#E2D8CC] text-sm relative z-20">
           <div className="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-4 mb-12 text-left">
             
-            {/* Colonne 1 : Infos Générales */}
             <div>
               <h4 className="text-white font-black text-base uppercase tracking-wider mb-4 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -198,7 +190,6 @@ export default function MentionsLegalesPage() {
               </div>
             </div>
 
-            {/* Colonne 2 : Horaires d'ouverture */}
             <div>
               <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Horaires</h4>
               <ul className="space-y-1.5 text-xs text-[#F5F0E8]">
@@ -212,7 +203,6 @@ export default function MentionsLegalesPage() {
               </ul>
             </div>
 
-            {/* Colonne 3 : Informations */}
             <div>
               <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Informations</h4>
               <ul className="space-y-2.5 text-xs font-medium">
@@ -231,7 +221,6 @@ export default function MentionsLegalesPage() {
               </ul>
             </div>
 
-            {/* Colonne 4 : Carte / Localisation */}
             <div>
               <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Nous trouver</h4>
               <div className="rounded-2xl overflow-hidden border border-[#59493E] h-40 shadow-inner">

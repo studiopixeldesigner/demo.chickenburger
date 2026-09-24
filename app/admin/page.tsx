@@ -26,11 +26,9 @@ interface Order {
   isNew: boolean;      
 }
 
-// Fonction de formatage automatique et propre des noms de catégories/onglets
 function formatTabName(rawKey: string): string {
   const key = rawKey.toLowerCase().trim();
 
-  // Dictionnaire des cas particuliers
   const customMap: Record<string, string> = {
     'selectedsauce': 'Sauce principale',
     'sauce': 'Sauce principale',
@@ -45,7 +43,6 @@ function formatTabName(rawKey: string): string {
     return customMap[key];
   }
 
-  // Automatisation pour toute nouvelle catégorie (ex: "supplement_boisson" -> "Supplément(s) Boisson")
   let formatted = rawKey
     .replace(/_/g, ' ')                  
     .replace(/([A-Z])/g, ' $1')          
@@ -59,7 +56,6 @@ function formatTabName(rawKey: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-// Formate les valeurs proprement (Transforme true/false en Oui/Non)
 function formatOptionValue(value: any): string {
   if (value === null || value === undefined || value === '' || value === false) return '';
 
@@ -254,7 +250,6 @@ export default function AdminCommandesPage() {
     setExpandedOrderId(expandedOrderId === order.id ? null : order.id);
   };
 
-  // Extraction propre avec filtrage des options vides, techniques et renommage automatique
   const getDynamicItemDetails = (item: any) => {
   const ignoredKeys = [
     'name', 'quantity', 'price', 'finalprice', 'id', 'image', 'category', 'total',

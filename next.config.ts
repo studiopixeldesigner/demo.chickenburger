@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 
-// Build statique pour GitHub Pages (voir .github/workflows/deploy.yml)
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 
 const nextConfig: NextConfig = {

@@ -9,7 +9,7 @@ export async function loginAction(password: string) {
     cookieStore.set('admin_session', 'authenticated', {
       httpOnly: true,
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 heures
+      maxAge: 60 * 60 * 24,
       sameSite: 'lax',
     });
     return { success: true };
