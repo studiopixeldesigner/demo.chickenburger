@@ -5,6 +5,7 @@ import { withBasePath } from '@/lib/base-path';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { IS_DEMO } from '@/lib/demo';
 
 interface OrderTrack {
   id: string; // ID formaté (CMD-001...)
@@ -87,8 +88,12 @@ function SuiviContent() {
     if (!cleanQuery) return;
 
     setSearched(true);
-    setLoading(true);
     setOrder(null);
+
+    // En démo, aucune vraie commande n'est passée : on n'interroge pas Supabase
+    if (IS_DEMO) return;
+
+    setLoading(true);
 
     try {
       const { data, error } = await supabase
@@ -280,6 +285,10 @@ function SuiviContent() {
                     })}
                   </ul>
                 </div>
+              </div>
+            ) : IS_DEMO ? (
+              <div className="bg-sky-400/10 border border-sky-400/40 rounded-3xl p-6 text-center text-sky-200 text-sm shadow-xl">
+                <strong className="text-sky-300">Mode démo :</strong> le suivi de commande est désactivé sur ce site de démonstration, car aucune commande n&apos;y est réellement passée.
               </div>
             ) : (
               <div className="bg-[#372D26]/90 border border-[#59493E] rounded-3xl p-6 text-center text-[#CBC0B4] text-sm shadow-xl">

@@ -6,6 +6,7 @@ import { withBasePath } from '@/lib/base-path';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { IS_DEMO, useDemoOuvert } from '@/lib/demo';
 
 // ==========================================
 // TYPES & INTERFACES
@@ -81,6 +82,7 @@ export default function PageCommander() {
   const router = useRouter();
 
   const [isOpen, setIsOpen] = useState<boolean | null>(null);
+  const demoOuvert = useDemoOuvert();
   const [loading, setLoading] = useState<boolean>(true);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -128,6 +130,9 @@ export default function PageCommander() {
   }, [cart]);
 
   useEffect(() => {
+    // En démo, c'est le visiteur qui choisit l'état du restaurant (bandeau en bas de page)
+    if (IS_DEMO) return;
+
     async function checkStatus() {
       try {
         const { data } = await supabase.from('settings').select('force_closed, force_open').single();
@@ -506,21 +511,26 @@ export default function PageCommander() {
 
     setIsSubmitting(true);
     try {
-      const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-      const nextNum = (count || 0) + 1;
-      const orderNumberFormatted = `CMD-${String(nextNum).padStart(3, '0')}`;
+      let orderNumberFormatted = '';
 
-      const { error } = await supabase.from('orders').insert([{
-        order_number: orderNumberFormatted,
-        customer_name: customerName,
-        phone: phone.trim(),
-        note: orderNote.trim() || null,
-        is_paid_online: true,
-        status: 'en_preparation',
-        items: cart,
-      }]);
+      // En démo, la commande est simulée : rien n'est envoyé au restaurant
+      if (!IS_DEMO) {
+        const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+        const nextNum = (count || 0) + 1;
+        orderNumberFormatted = `CMD-${String(nextNum).padStart(3, '0')}`;
 
-      if (error) throw error;
+        const { error } = await supabase.from('orders').insert([{
+          order_number: orderNumberFormatted,
+          customer_name: customerName,
+          phone: phone.trim(),
+          note: orderNote.trim() || null,
+          is_paid_online: true,
+          status: 'en_preparation',
+          items: cart,
+        }]);
+
+        if (error) throw error;
+      }
 
       setCart([]);
       localStorage.removeItem(STORAGE_KEY);
@@ -534,11 +544,13 @@ export default function PageCommander() {
     }
   };
 
-  if (isOpen === null) {
+  const restaurantOuvert = IS_DEMO ? demoOuvert : isOpen;
+
+  if (restaurantOuvert === null) {
     return <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex items-center justify-center text-xs font-bold text-emerald-400">Vérification des horaires...</main>;
   }
 
-  if (!isOpen) {
+  if (!restaurantOuvert) {
     return (
       <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex items-center justify-center p-6">
         <div className="bg-[#372D26] border border-[#59493E] rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
@@ -1102,8 +1114,14 @@ export default function PageCommander() {
                     <input type="tel" placeholder="Téléphone (10 chiffres, ex: 0612345678)" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} className="w-full bg-[#40342C] border border-[#59493E] rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500" />
                   </div>
 
+                  {IS_DEMO && (
+                    <p className="bg-sky-400/10 border border-sky-400/40 text-sky-200 text-[11px] leading-relaxed rounded-2xl p-3">
+                      <strong className="text-sky-300">Mode démo :</strong> cette commande est simulée. Elle ne sera pas envoyée au restaurant et aucun paiement ne sera demandé.
+                    </p>
+                  )}
+
                   <button disabled={isSubmitting} onClick={handleValidateOrder} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white font-black text-xs uppercase py-4 rounded-2xl shadow-lg disabled:opacity-50">
-                    {isSubmitting ? "Validation..." : "Procéder au paiement"}
+                    {isSubmitting ? "Validation..." : IS_DEMO ? "Simuler la commande (démo)" : "Procéder au paiement"}
                   </button>
                 </>
               )}
@@ -1119,12 +1137,21 @@ export default function PageCommander() {
             <div className="relative w-20 h-20 mx-auto overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg animate-bounce">
               <Image src={withBasePath('/logo.png')} alt="Logo Chicken" fill className="object-cover" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-white">Merci pour votre commande !</h3>
-              <p className="text-[#F5F0E8] text-sm">Votre numéro de commande est le <span className="font-black text-emerald-400">{orderSuccessModal.orderNumber}</span></p>
-            </div>
+            {IS_DEMO ? (
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white">Commande simulée !</h3>
+                <p className="text-[#F5F0E8] text-sm">Ceci est une <strong className="text-sky-300">démonstration</strong> : aucune commande n&apos;a été envoyée au restaurant et aucun paiement n&apos;a été effectué.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white">Merci pour votre commande !</h3>
+                <p className="text-[#F5F0E8] text-sm">Votre numéro de commande est le <span className="font-black text-emerald-400">{orderSuccessModal.orderNumber}</span></p>
+              </div>
+            )}
             <div className="pt-2 space-y-2">
-              <button onClick={() => router.push(`/suivi?order=${orderSuccessModal.orderNumber}`)} className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xs uppercase py-3.5 rounded-2xl shadow-lg">Suivre votre commande</button>
+              {!IS_DEMO && (
+                <button onClick={() => router.push(`/suivi?order=${orderSuccessModal.orderNumber}`)} className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xs uppercase py-3.5 rounded-2xl shadow-lg">Suivre votre commande</button>
+              )}
               <button onClick={() => setOrderSuccessModal({ isOpen: false, orderNumber: '' })} className="w-full bg-[#4E3F35] text-[#CBC0B4] font-bold text-xs py-2.5 rounded-2xl">Fermer</button>
             </div>
           </div>

@@ -4,15 +4,20 @@ import Image from 'next/image';
 import { withBasePath } from '@/lib/base-path';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { IS_DEMO, useDemoOuvert } from '@/lib/demo';
 
 export default function VitrineClient() {
   const [estOuvert, setEstOuvert] = useState<boolean | null>(null);
   const [texteStatut, setTexteStatut] = useState("Vérification des horaires...");
   const [isVacationMode, setIsVacationMode] = useState(false);
   const [isForceOpenMode, setIsForceOpenMode] = useState(false);
+  const demoOuvert = useDemoOuvert();
 
   // Vérification combinée : Mode Vacances / Mode Ouverture Forcée (Supabase) + Horaires [cite: 9]
   useEffect(() => {
+    // En démo, c'est le visiteur qui choisit l'état du restaurant (bandeau en bas de page)
+    if (IS_DEMO) return;
+
     const verifierStatutGlobal = async () => {
       try {
         const { data: settingsData } = await supabase.from('settings').select('force_closed, force_open').single();
@@ -92,6 +97,11 @@ export default function VitrineClient() {
     return () => clearInterval(interval);
   }, []);
 
+  const restaurantOuvert = IS_DEMO ? demoOuvert : estOuvert;
+  const texteBarre = IS_DEMO
+    ? (demoOuvert ? "Ouvert • Commandes en ligne actives" : "Restaurant Fermé (Impossible de commander)")
+    : texteStatut;
+
   return (
     <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] selection:bg-orange-500 selection:text-white overflow-x-hidden flex flex-col justify-between pt-24">
       <div>
@@ -101,12 +111,12 @@ export default function VitrineClient() {
             ? "bg-purple-600 shadow-purple-900/20" 
             : isForceOpenMode
               ? "bg-amber-600 shadow-amber-900/20"
-              : estOuvert 
-                ? "bg-emerald-600 shadow-emerald-900/20" 
+              : restaurantOuvert
+                ? "bg-emerald-600 shadow-emerald-900/20"
                 : "bg-red-600 shadow-red-900/20"
         }`}>
-          <span className={`w-2.5 h-2.5 rounded-full bg-white ${(estOuvert || isForceOpenMode) && !isVacationMode ? "animate-ping" : ""}`}></span>
-          {texteStatut}
+          <span className={`w-2.5 h-2.5 rounded-full bg-white ${(restaurantOuvert || isForceOpenMode) && !isVacationMode ? "animate-ping" : ""}`}></span>
+          {texteBarre}
         </div>
 
         {/* Header fixe avec le numéro de téléphone à la place du panier */}
@@ -154,10 +164,10 @@ export default function VitrineClient() {
             
             <p className="text-[#F5F0E8] text-base sm:text-xl max-w-xl mx-auto mb-10 font-medium leading-relaxed drop-shadow-md">
               Savourez nos tacos généreux et nos burgers croustillants préparés avec passion. 
-              {estOuvert && !isVacationMode ? " Commandez en ligne dès maintenant !" : " Le restaurant ou les commandes en ligne sont actuellement fermés."}
+              {restaurantOuvert && !isVacationMode ? " Commandez en ligne dès maintenant !" : " Le restaurant ou les commandes en ligne sont actuellement fermés."}
             </p>
-            
-            {estOuvert && !isVacationMode ? (
+
+            {restaurantOuvert && !isVacationMode ? (
               <div className="animate-bounce inline-block">
                 <Link 
                   href="/commander"
