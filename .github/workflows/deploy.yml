@@ -28,6 +28,16 @@ jobs:
       - id: pages
         uses: actions/configure-pages@v5
 
+      - name: Vérifier les secrets Supabase
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Ajoute les secrets NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY dans Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
       - run: npm ci
 
       # L'admin repose sur des Server Actions et des cookies, impossibles sans serveur :
