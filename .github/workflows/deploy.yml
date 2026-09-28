@@ -40,8 +40,6 @@ jobs:
 
       - run: npm ci
 
-      - run: rm -rf app/admin app/actions
-
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'

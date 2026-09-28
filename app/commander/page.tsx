@@ -2,11 +2,28 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { withBasePath } from '@/lib/base-path';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { IS_DEMO, useDemoOuvert } from '@/lib/demo';
+import { withBasePath } from '@/lib/base-path';
+import { IS_DEMO, saveDemoOrder, useDemoOuvert } from '@/lib/demo';
+import SiteHeader from '@/app/_components/SiteHeader';
+import SiteFooter from '@/app/_components/SiteFooter';
+import Bump from '@/app/_components/Bump';
+import ChipScroller from '@/app/_components/ChipScroller';
+import { CategoryHeading, PageIntro, PriceTag, inputClass, labelClass } from '@/app/_components/ui';
+import {
+  IconArrowLeft,
+  IconBag,
+  IconCheck,
+  IconCup,
+  IconInfo,
+  IconLock,
+  IconMinus,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from '@/app/_components/icons';
 
 interface Product {
   id: string;
@@ -69,11 +86,91 @@ interface CartItem {
 
 const STORAGE_KEY = 'chicken_burger_cart';
 
+// Confettis de la fenêtre de confirmation (positions fixes, animées en CSS).
+const CONFETTI = [
+  { x: '126px', y: '-10px', r: '-180deg', d: '0ms', color: 'var(--color-cheddar)', round: true },
+  { x: '152px', y: '30px', r: '-97deg', d: '40ms', color: 'var(--color-ketchup)', round: false },
+  { x: '92px', y: '43px', r: '-14deg', d: '80ms', color: '#fffbf5', round: false },
+  { x: '63px', y: '86px', r: '69deg', d: '120ms', color: '#fce5c8', round: true },
+  { x: '-4px', y: '73px', r: '152deg', d: '160ms', color: 'var(--color-cheddar)', round: false },
+  { x: '-49px', y: '49px', r: '-125deg', d: '200ms', color: 'var(--color-ketchup)', round: false },
+  { x: '-122px', y: '57px', r: '-42deg', d: '0ms', color: '#fffbf5', round: true },
+  { x: '-135px', y: '19px', r: '41deg', d: '40ms', color: '#fce5c8', round: false },
+  { x: '-202px', y: '-7px', r: '124deg', d: '80ms', color: 'var(--color-cheddar)', round: false },
+  { x: '-169px', y: '-45px', r: '-153deg', d: '120ms', color: 'var(--color-ketchup)', round: true },
+  { x: '-121px', y: '-69px', r: '-70deg', d: '160ms', color: '#fffbf5', round: false },
+  { x: '-119px', y: '-114px', r: '13deg', d: '200ms', color: '#fce5c8', round: false },
+  { x: '-51px', y: '-115px', r: '96deg', d: '0ms', color: 'var(--color-cheddar)', round: true },
+  { x: '3px', y: '-102px', r: '179deg', d: '40ms', color: 'var(--color-ketchup)', round: false },
+  { x: '66px', y: '-124px', r: '-98deg', d: '80ms', color: '#fffbf5', round: false },
+  { x: '98px', y: '-91px', r: '-15deg', d: '120ms', color: '#fce5c8', round: true },
+  { x: '174px', y: '-81px', r: '68deg', d: '160ms', color: 'var(--color-cheddar)', round: false },
+  { x: '166px', y: '-40px', r: '151deg', d: '200ms', color: 'var(--color-ketchup)', round: false },
+];
+
 const RuptureBadge = () => (
-  <span className="inline-flex items-center justify-center bg-red-600 text-white font-black text-[10px] px-2 py-1 rounded uppercase tracking-wider">
+  <span className="inline-flex items-center justify-center rounded bg-ketchup px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] text-white">
     RUPTURE
   </span>
 );
+
+function RequiredMark() {
+  return (
+    <>
+      <span className="ml-1 text-ketchup" aria-hidden="true">*</span>
+      <span className="sr-only"> (obligatoire)</span>
+    </>
+  );
+}
+
+function OptionHeading({ title, required, meta }: { title: React.ReactNode; required?: boolean; meta?: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-3">
+      <h4 className="text-xs font-bold uppercase tracking-[0.12em]">
+        {title}
+        {required && <RequiredMark />}
+      </h4>
+      {meta && <span className="shrink-0 text-xs font-semibold text-grill-soft tabular-nums">{meta}</span>}
+    </div>
+  );
+}
+
+function StepButton({
+  label,
+  onClick,
+  disabled,
+  size = 'md',
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  size?: 'md' | 'lg';
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={`grid place-items-center rounded-md bg-crumb text-grill transition duration-150 hover:bg-sesame active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-crumb ${
+        size === 'lg' ? 'size-12' : 'size-8'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ExtraPrice({ price, inverted = false }: { price: number; inverted?: boolean }) {
+  if (price <= 0) return null;
+  return (
+    <span className={`shrink-0 text-xs font-bold tabular-nums ${inverted ? "text-white/90" : "text-pickle-ink"}`}>
+      +{price.toFixed(2)} €
+    </span>
+  );
+}
 
 export default function PageCommander() {
   const router = useRouter();
@@ -509,7 +606,16 @@ export default function PageCommander() {
     try {
       let orderNumberFormatted = '';
 
-      if (!IS_DEMO) {
+      if (IS_DEMO) {
+        // Démo : la commande reste dans le navigateur du visiteur, rien n'est envoyé au restaurant.
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        orderNumberFormatted = saveDemoOrder({
+          customerName,
+          phone: phone.trim(),
+          note: orderNote.trim() || null,
+          items: cart,
+        });
+      } else {
         const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
         const nextNum = (count || 0) + 1;
         orderNumberFormatted = `CMD-${String(nextNum).padStart(3, '0')}`;
@@ -539,540 +645,685 @@ export default function PageCommander() {
     }
   };
 
+  // Fenêtres ouvertes : on bloque le défilement de la page et Échap ferme la fenêtre active.
+  useEffect(() => {
+    const hasOverlay = Boolean(articleActif) || isCartOpen || orderSuccessModal.isOpen;
+    if (!hasOverlay) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (articleActif) setArticleActif(null);
+      else if (isCartOpen) setIsCartOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [articleActif, isCartOpen, orderSuccessModal.isOpen]);
+
+  // Petite notification après un ajout au panier.
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleAddToCart = () => {
+    if (!articleActif) return;
+    const productName = articleActif.name;
+    addToCart();
+    setToast({ id: Date.now(), text: `${productName} ajouté au panier` });
+  };
+
   const restaurantOuvert = IS_DEMO ? demoOuvert : isOpen;
 
   if (restaurantOuvert === null) {
-    return <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex items-center justify-center text-xs font-bold text-emerald-400">Vérification des horaires...</main>;
+    return (
+      <main className="flex min-h-dvh flex-1 items-center justify-center p-6">
+        <p role="status" className="flex items-center gap-3 text-sm font-semibold text-grill-soft">
+          <span className="size-2.5 animate-pulse rounded-sm bg-pickle" aria-hidden="true" />
+          Vérification des horaires...
+        </p>
+      </main>
+    );
   }
 
   if (!restaurantOuvert) {
     return (
-      <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex items-center justify-center p-6">
-        <div className="bg-[#372D26] border border-[#59493E] rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
-          <div className="relative w-16 h-16 mx-auto overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg animate-bounce">
-            <Image src={withBasePath('/logo.png')} alt="Logo" fill className="object-cover" />
+      <main className="flex min-h-dvh flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-md animate-rise overflow-hidden rounded-2xl bg-crumb text-center">
+          <div className="flex items-center justify-center gap-2 bg-ketchup py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white">
+            <IconLock className="size-4" />
+            Commandes en ligne fermées
           </div>
-          <h1 className="text-xl font-black uppercase text-white">Restaurant Fermé</h1>
-          <p className="text-xs text-[#CBC0B4]">Les commandes en ligne sont désactivées. À bientôt !</p>
-          <Link href="/" className="block w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-3 rounded-2xl text-sm transition">Retour à l&apos;accueil</Link>
+          <div className="space-y-5 p-8">
+            <div className="relative mx-auto size-20 overflow-hidden rounded-full">
+              <Image src={withBasePath('/logo.png')} alt="Logo Chicken Burger" fill sizes="80px" className="object-cover" />
+            </div>
+            <h1 className="font-display text-5xl uppercase leading-none">Restaurant fermé</h1>
+            <p className="text-sm text-grill-soft">Les commandes en ligne sont désactivées. À bientôt !</p>
+            {IS_DEMO && (
+              <p className="rounded-lg bg-cheddar-light px-4 py-3 text-sm text-grill">
+                <strong>Démo :</strong> repassez le restaurant sur « Ouvert » dans la bannière en haut de page pour tester la commande.
+              </p>
+            )}
+            <Link
+              href="/"
+              className="btn btn-grill flex w-full py-3.5 text-sm"
+            >
+              <IconArrowLeft className="size-4" />
+              Retour à l&apos;accueil
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex flex-col justify-between selection:bg-emerald-500 selection:text-white relative overflow-hidden">
-      <div>
-        <header className="fixed top-0 left-0 right-0 z-40 bg-[#372D26]/95 backdrop-blur-md border-b border-[#59493E] flex items-center justify-between px-6 py-4 shadow-md">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-110 transition duration-300">
-              <Image src={withBasePath('/logo.png')} alt="Logo" fill className="object-cover" />
-            </div>
-            <span className="font-black text-lg tracking-tighter text-white">
-              CHICKEN <span className="text-orange-400">BURGER</span>
-            </span>
-          </Link>
-          <button onClick={() => setIsCartOpen(true)} className="bg-[#4E3F35] hover:bg-[#5E4C40] text-white px-5 py-2.5 rounded-full font-bold text-sm border border-[#6B5749] flex items-center gap-3 transition shadow-md">
-            <span>Panier</span>
-            <span className="bg-emerald-500 text-white text-xs px-2.5 py-0.5 rounded-full font-black">{getTotalCartItemsCount()}</span>
-          </button>
-        </header>
+  const cartCount = getTotalCartItemsCount();
+  const showCartBar = cart.length > 0 && !isCartOpen && !articleActif && !orderSuccessModal.isOpen;
+  const isDirectConfig = allAllowedSlugs.length === 0 && !hasMeat && !hasSauce && !hasMenuOption;
 
-        <div className="max-w-6xl mx-auto px-4 pt-28 pb-4 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight mb-3 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-rose-400 to-amber-400">Notre Carte & Menus</h1>
-          <p className="text-[#F5F0E8] text-sm">Faites votre choix et personnalisez votre commande en un clic</p>
-        </div>
+  const cartTotal = getTotalCartPrice();
+
+  const choiceTile = (selected: boolean) =>
+    `rounded-lg p-3 text-center transition duration-200 active:scale-95 ${selected ? 'scale-[1.02] bg-pickle text-white' : 'bg-bun text-grill hover:bg-sesame'}`;
+
+  const optionRow = (state: { selected: boolean; disabled?: boolean; outOfStock?: boolean }) =>
+    `flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition duration-200 active:scale-[0.98] ${
+      state.outOfStock
+        ? 'pointer-events-none bg-bun opacity-40'
+        : state.disabled
+          ? 'cursor-not-allowed bg-bun opacity-50'
+          : state.selected
+            ? 'cursor-pointer bg-pickle-light'
+            : 'cursor-pointer bg-bun hover:bg-sesame'
+    }`;
+
+  return (
+    <>
+      <SiteHeader
+        action={
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            aria-label={`Ouvrir le panier (${cartCount} article${cartCount > 1 ? 's' : ''})`}
+            className="group btn btn-grill h-10 gap-2.5 pl-3 pr-2 text-sm"
+          >
+            <IconBag className="size-4 group-hover:animate-wiggle" />
+            <span className="hidden sm:inline">Panier</span>
+            <Bump value={cartCount} className="grid h-6 min-w-6 place-items-center rounded-md bg-cheddar px-1.5 text-xs font-black text-espresso tabular-nums">
+              {cartCount}
+            </Bump>
+          </button>
+        }
+      />
+
+      <main id="contenu" className={`flex-1 ${showCartBar ? 'pb-24 md:pb-0' : ''}`}>
+        <PageIntro eyebrow="Commande en ligne" title="Notre carte & menus">
+          Faites votre choix et personnalisez votre commande en un clic
+        </PageIntro>
 
         {!loading && categories.length > 0 && (
-          <div className="max-w-6xl mx-auto px-4 mb-8">
-            <div className="md:hidden">
-              <select
-                value={activeCategoryFilter}
-                onChange={(e) => setActiveCategoryFilter(e.target.value)}
-                className="w-full bg-[#372D26] text-white border border-[#59493E] rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-emerald-500"
-              >
-                <option value="all">Tous les produits</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="hidden md:flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => setActiveCategoryFilter("all")}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
-                  activeCategoryFilter === "all"
-                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
-                    : 'bg-[#372D26] text-[#CBC0B4] border-[#59493E] hover:text-white'
-                }`}
-              >
-                Tous les produits
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryFilter(cat.id)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition border ${
-                    activeCategoryFilter === cat.id
-                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
-                      : 'bg-[#372D26] text-[#CBC0B4] border-[#59493E] hover:text-white'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
+          <div className="sticky top-[65px] z-30 animate-fade-in border-b border-sesame-dark bg-bun">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6">
+              <ChipScroller label="Filtrer par catégorie" activeKey={activeCategoryFilter}>
+                {[{ id: 'all', name: 'Tous les produits' }, ...categories].map((cat) => {
+                  const active = activeCategoryFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setActiveCategoryFilter(cat.id)}
+                      aria-pressed={active}
+                      className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 active:scale-95 ${
+                        active ? 'bg-grill text-bun' : 'bg-crumb text-grill hover:-translate-y-0.5 hover:bg-sesame'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </ChipScroller>
             </div>
           </div>
         )}
 
-        <section className="max-w-6xl mx-auto px-4 space-y-16 pb-16">
+        <div key={activeCategoryFilter} className="mx-auto max-w-6xl animate-fade-in space-y-14 px-4 pb-24 pt-8 sm:px-6">
           {loading ? (
-            <div className="text-center py-20 text-emerald-400 font-bold">Chargement...</div>
+            <div role="status" aria-label="Chargement..." className="space-y-4">
+              <div className="h-9 w-56 animate-pulse rounded-md bg-sesame" />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-48 animate-pulse rounded-xl bg-sesame/70" />
+                ))}
+              </div>
+            </div>
           ) : (
             displayedCategories.map((catConfig) => {
-              const catProducts = products.filter(p => 
+              const catProducts = products.filter(p =>
                 p.category_id ? p.category_id === catConfig.id : p.category?.toLowerCase().trim() === catConfig.name.toLowerCase().trim()
               );
               if (catProducts.length === 0) return null;
+              const accentIndex = categories.findIndex(c => c.id === catConfig.id);
 
               return (
-                <div key={catConfig.id} className="space-y-6">
-                  <h2 className="text-2xl font-black uppercase tracking-wider border-b border-[#59493E] pb-3 text-emerald-400 inline-block">{catConfig.name}</h2>
-                  <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+                <section key={catConfig.id} aria-labelledby={`cmd-cat-${catConfig.id}`} className="space-y-5">
+                  <CategoryHeading id={`cmd-cat-${catConfig.id}`} name={catConfig.name} count={catProducts.length} accentIndex={accentIndex} />
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {catProducts.map((article) => {
                       const opts = (article.allowed_options && article.allowed_options.length > 0) ? article.allowed_options : (catConfig.allowed_options || []);
                       const isCatDirect = opts.length === 0 && !article.has_menu;
                       return (
-                        <div key={article.id} className={`group p-6 rounded-3xl border transition duration-300 flex flex-col justify-between relative overflow-hidden ${article.inStock ? "bg-[#372D26]/90 border-[#59493E] hover:border-emerald-500/60 shadow-xl" : "bg-[#372D26]/40 border-[#59493E]/40 opacity-50"}`}>
-                          <div className="relative z-10">
+                        <article
+                          key={article.id}
+                          className={`group reveal flex flex-col rounded-xl bg-crumb p-5 ${article.inStock ? '' : 'opacity-60'}`}
+                        >
+                          <div className="flex gap-4">
                             {article.imageUrl && (
-                              <div className="relative w-full h-40 mb-4 overflow-hidden rounded-2xl bg-[#40342C] border border-[#59493E]">
-                                <Image src={article.imageUrl} alt={article.name} fill className="object-cover group-hover:scale-105 transition duration-500" />
+                              <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-sesame">
+                                <Image src={article.imageUrl} alt={article.name} fill sizes="80px" className="object-cover transition-transform duration-500 ease-snappy group-hover:scale-110 group-hover:-rotate-2" />
                               </div>
                             )}
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="font-bold text-xl text-white">{article.name}</h3>
-                                {!article.inStock && <div className="mt-1"><RuptureBadge /></div>}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <h3 className="text-lg font-bold leading-snug">{article.name}</h3>
+                                <PriceTag value={article.price} />
                               </div>
-                              <span className="font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full text-sm border border-emerald-500/20">{article.price.toFixed(2)} €</span>
+                              {!article.inStock && <div className="mt-2"><RuptureBadge /></div>}
+                              {article.description && (
+                                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-grill-soft">{article.description}</p>
+                              )}
                             </div>
-                            <p className="text-sm text-[#F5F0E8] mb-6">{article.description}</p>
                           </div>
-                          <button
-                            disabled={!article.inStock}
-                            onClick={() => openConfigurator(article)}
-                            className={`relative z-10 w-full py-3.5 rounded-2xl font-bold uppercase text-xs transition duration-300 ${article.inStock ? "bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white shadow-lg" : "bg-[#4E3F35] text-[#CBC0B4] cursor-not-allowed"}`}
-                          >
-                            {article.inStock ? (isCatDirect ? "+ Ajouter au panier" : "+ Personnaliser & Ajouter") : "Rupture de stock"}
-                          </button>
-                        </div>
+                          <div className="mt-auto pt-5">
+                            <button
+                              type="button"
+                              disabled={!article.inStock}
+                              onClick={() => openConfigurator(article)}
+                              className={`group/add flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold ${
+                                article.inStock
+                                  ? 'btn btn-ketchup'
+                                  : 'cursor-not-allowed bg-sesame text-grill-soft'
+                              }`}
+                            >
+                              {article.inStock ? (
+                                <>
+                                  <IconPlus className="size-4 transition-transform duration-300 ease-spring group-hover/add:rotate-90" />
+                                  {isCatDirect ? "Ajouter au panier" : "Personnaliser & Ajouter"}
+                                </>
+                              ) : "Rupture de stock"}
+                            </button>
+                          </div>
+                        </article>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               );
             })
           )}
-        </section>
-      </div>
+        </div>
+      </main>
 
-      <footer className="bg-[#332922] border-t border-[#59493E] pt-16 pb-12 text-[#E2D8CC] text-sm relative z-20">
-        <div className="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-4 mb-12 text-left">
-          <div>
-            <h4 className="text-white font-black text-base uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Chicken Burger Lure
-            </h4>
-            <p className="mb-4 leading-relaxed text-xs text-[#CBC0B4]">
-              Spécialiste du tacos garni et du burger croustillant. Qualité irréprochable et produits frais garantis.
-            </p>
-            <div className="space-y-2 text-xs">
-              <p><strong className="text-white">Viandes :</strong> Origine France, Pologne, Allemagne (Certifiées Halal).</p>
-              <p><strong className="text-white">Adresse : </strong><a href="https://www.google.com/maps/search/?api=1&query=34+Rue+de+la+Gare,+70200+Lure" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">34 Rue de la Gare, 70200 Lure</a></p>
-              <p><strong className="text-white">Téléphone : </strong><a href="tel:0363751530" className="text-emerald-400 hover:underline">03 63 75 15 30</a></p>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Horaires</h4>
-            <ul className="space-y-1.5 text-xs text-[#F5F0E8]">
-              <li><strong className="text-white">Lundi :</strong> 18:00 - 22:00</li>
-              <li><strong className="text-white">Mardi :</strong> <span className="text-rose-400 font-bold">Fermé</span></li>
-              <li><strong className="text-white">Mercredi :</strong> 17:30 - 22:00</li>
-              <li><strong className="text-white">Jeudi :</strong> 11:00 - 14:00 / 18:00 - 22:00</li>
-              <li><strong className="text-white">Vendredi :</strong> 11:00 - 14:00 / 18:00 - 22:00</li>
-              <li><strong className="text-white">Samedi :</strong> 18:00 - 22:00</li>
-              <li><strong className="text-white">Dimanche :</strong> 17:30 - 22:00</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Informations</h4>
-            <ul className="space-y-2.5 text-xs font-medium">
-              <li><Link href="/menu" className="hover:text-orange-400 transition">Menu</Link></li>
-              <li><Link href="/suivi" className="hover:text-orange-400 transition">Suivi de commande</Link></li>
-              <li><Link href="/provenance-viandes" className="hover:text-orange-400 transition">Provenance des viandes</Link></li>
-              <li><Link href="/mentions-legales" className="hover:text-orange-400 transition">Mentions légales</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-black text-base uppercase tracking-wider mb-4">Nous trouver</h4>
-            <div className="rounded-2xl overflow-hidden border border-[#59493E] h-40 shadow-inner">
-              <iframe title="Carte 34 Rue de la Gare Lure" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2728.895316335193!2d6.4912!3d47.6845!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47923a1820b33b9f%3A0x6b8a8b13c1234567!2s34+Rue+de+la+Gare%2C+70200+Lure!5e0!3m2!1sfr!2sfr!4v1650000000000!5m2!1sfr!2sfr" width="100%" height="100%" style={{ border: 0 }} allowFullScreen={false} loading="lazy"></iframe>
-            </div>
-          </div>
+      <SiteFooter />
+
+      {showCartBar && (
+        <div className="fixed inset-x-0 bottom-0 z-30 animate-rise border-t border-sesame-dark bg-bun px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className="flex w-full items-center justify-between rounded-xl bg-grill px-5 py-3.5 text-bun transition-transform active:scale-[0.98]"
+          >
+            <span className="flex items-center gap-3 text-sm font-bold">
+              <Bump value={cartCount} className="grid h-6 min-w-6 place-items-center rounded-md bg-cheddar px-1.5 text-xs font-black text-espresso tabular-nums">
+                {cartCount}
+              </Bump>
+              Voir le panier
+            </span>
+            <Bump value={cartTotal} className="inline-block font-display text-2xl leading-none tabular-nums">
+              {cartTotal.toFixed(2)} €
+            </Bump>
+          </button>
         </div>
-        <div className="max-w-6xl mx-auto px-6 border-t border-[#59493E] pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-[#B8ABA0]">
-          <p>© 2026 Chicken Burger Lure. Tous droits réservés.</p>
-          <p className="mt-2 sm:mt-0"><a href="https://www.google.com/maps/search/?api=1&query=34+Rue+de+la+Gare,+70200+Lure" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">34 Rue de la Gare, 70200 Lure</a> — Tél : <a href="tel:0363751530" className="hover:text-white transition">03 63 75 15 30</a></p>
-          <p className="mt-1">Powered by <a href="https://studiopixeldesigner.github.io/pixeldesigner" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline font-semibold transition">Pixel Designer</a></p>
-        </div>
-      </footer>
+      )}
 
       {articleActif && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
-          <div className="bg-[#372D26] border border-[#59493E] w-full max-w-lg sm:rounded-3xl rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-[#59493E] pb-4">
-              <div>
-                <h3 className="text-xl font-black text-white">{articleActif.name}</h3>
-                <p className="text-emerald-400 font-bold text-sm">Total estimé : {calculateUnitConfigPrice.toFixed(2)} €</p>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="config-title"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+        >
+          <div className="absolute inset-0 animate-fade-in bg-scrim/70" aria-hidden="true" />
+          <div className="relative flex max-h-[92dvh] w-full max-w-lg animate-rise flex-col overflow-hidden rounded-t-2xl bg-crumb sm:rounded-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-sesame px-5 py-4 sm:px-6 sm:py-5">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-grill-soft">
+                  {currentCategoryConfig?.name ?? articleActif.category}
+                </p>
+                <h3 id="config-title" className="mt-1 font-display text-3xl uppercase leading-none">{articleActif.name}</h3>
+                <p className="mt-2 text-sm font-semibold text-grill-soft">
+                  Total estimé :{' '}
+                  <Bump value={calculateUnitConfigPrice} className="inline-block text-pickle-ink tabular-nums">
+                    {calculateUnitConfigPrice.toFixed(2)} €
+                  </Bump>
+                </p>
               </div>
-              <button onClick={() => setArticleActif(null)} className="bg-[#4E3F35] hover:bg-[#5E4C40] text-white rounded-full w-9 h-9 flex items-center justify-center font-bold">✕</button>
+              <button
+                type="button"
+                onClick={() => setArticleActif(null)}
+                aria-label="Fermer"
+                className="group grid size-10 shrink-0 place-items-center rounded-lg bg-bun text-grill transition duration-200 hover:bg-sesame active:scale-90"
+              >
+                <IconX className="size-5 transition-transform duration-300 ease-spring group-hover:rotate-90" />
+              </button>
             </div>
 
-            {allAllowedSlugs.length === 0 && !hasMeat && !hasSauce && !hasMenuOption ? (
-              <div className="space-y-4 py-4">
-                <h4 className="font-bold text-white text-xs uppercase">Quantité</h4>
-                <div className="flex items-center justify-center gap-4">
-                  <button type="button" onClick={() => setDirectQuantity(Math.max(1, directQuantity - 1))} className="w-10 h-10 bg-[#4E3F35] border border-[#59493E] rounded-xl font-bold text-lg text-white">-</button>
-                  <span className="text-lg font-bold text-white w-8 text-center">{directQuantity}</span>
-                  <button type="button" onClick={() => setDirectQuantity(directQuantity + 1)} className="w-10 h-10 bg-[#4E3F35] border border-[#59493E] rounded-xl font-bold text-lg text-white">+</button>
+            <div className="flex-1 space-y-7 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+              {articleActif.description && (
+                <p className="text-sm leading-relaxed text-grill-soft">{articleActif.description}</p>
+              )}
+              {isDirectConfig ? (
+                <div>
+                  <OptionHeading title="Quantité" />
+                  <div className="flex items-center justify-center gap-6 rounded-xl bg-bun py-5">
+                    <StepButton size="lg" label="Retirer un article" onClick={() => setDirectQuantity(Math.max(1, directQuantity - 1))}>
+                      <IconMinus className="size-5" />
+                    </StepButton>
+                    <Bump value={directQuantity} className="inline-block w-10 text-center font-display text-5xl leading-none tabular-nums">{directQuantity}</Bump>
+                    <StepButton size="lg" label="Ajouter un article" onClick={() => setDirectQuantity(directQuantity + 1)}>
+                      <IconPlus className="size-5" />
+                    </StepButton>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {hasMeat && (
-                  <div className="space-y-4">
-                    {isTacos && (
-                      <div className="space-y-2">
-                        <h4 className="font-bold text-white text-xs uppercase">Nombre de viandes (Obligatoire)</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { id: "1", label: "1 Viande", priceText: "Base" },
-                            { id: "2", label: "2 Viandes", priceText: "+1.50 €" },
-                            { id: "3", label: "3 Viandes", priceText: "+3.00 €" },
-                          ].map(opt => (
-                            <button key={opt.id} type="button" onClick={() => { setNombreViandes(opt.id); setSelectedViandes({}); if (opt.id !== "3") setNombreGalettes("1"); }} className={`p-3 rounded-2xl border text-center transition ${nombreViandes === opt.id ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-[#59493E] bg-[#40342C] text-[#F5F0E8]'}`}>
-                              <span className="block text-xs font-bold">{opt.label}</span>
-                              <span className="block text-[10px] text-[#CBC0B4]">{opt.priceText}</span>
-                            </button>
-                          ))}
-                        </div>
-                        {nombreViandes === "3" && (
-                          <div className="pt-2">
-                            <h4 className="font-bold text-white text-xs uppercase mb-2">Nombre de galettes</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                              {[{ id: "1", label: "1 Galette", priceText: "Base" }, { id: "2", label: "2 Galettes", priceText: "+1.50 €" }].map(opt => (
-                                <button key={opt.id} type="button" onClick={() => setNombreGalettes(opt.id)} className={`p-3 rounded-2xl border text-center transition ${nombreGalettes === opt.id ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-[#59493E] bg-[#40342C] text-[#F5F0E8]'}`}>
-                                  <span className="block text-xs font-bold">{opt.label}</span>
-                                  <span className="block text-[10px] text-[#CBC0B4]">{opt.priceText}</span>
+              ) : (
+                <>
+                  {hasMeat && (
+                    <div className="space-y-6">
+                      {isTacos && (
+                        <div>
+                          <OptionHeading title="Nombre de viandes" required />
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: "1", label: "1 Viande", priceText: "Base" },
+                              { id: "2", label: "2 Viandes", priceText: "+1.50 €" },
+                              { id: "3", label: "3 Viandes", priceText: "+3.00 €" },
+                            ].map(opt => {
+                              const selected = nombreViandes === opt.id;
+                              return (
+                                <button key={opt.id} type="button" aria-pressed={selected} onClick={() => { setNombreViandes(opt.id); setSelectedViandes({}); if (opt.id !== "3") setNombreGalettes("1"); }} className={choiceTile(selected)}>
+                                  <span className="block text-sm font-bold">{opt.label}</span>
+                                  <span className={`block text-xs tabular-nums ${selected ? 'text-white/85' : 'text-grill-soft'}`}>{opt.priceText}</span>
                                 </button>
-                              ))}
+                              );
+                            })}
+                          </div>
+                          {nombreViandes === "3" && (
+                            <div className="mt-5">
+                              <OptionHeading title="Nombre de galettes" />
+                              <div className="grid grid-cols-2 gap-2">
+                                {[{ id: "1", label: "1 Galette", priceText: "Base" }, { id: "2", label: "2 Galettes", priceText: "+1.50 €" }].map(opt => {
+                                  const selected = nombreGalettes === opt.id;
+                                  return (
+                                    <button key={opt.id} type="button" aria-pressed={selected} onClick={() => setNombreGalettes(opt.id)} className={choiceTile(selected)}>
+                                      <span className="block text-sm font-bold">{opt.label}</span>
+                                      <span className={`block text-xs tabular-nums ${selected ? 'text-white/85' : 'text-grill-soft'}`}>{opt.priceText}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {listViandes.length > 0 && (() => {
+                        const maxMeatLimit = getEffectiveMaxMeatLimit();
+                        const currentMeatTotal = getTotalViandesSelected();
+                        const isMeatMaxReached = currentMeatTotal >= maxMeatLimit;
+
+                        return (
+                          <div>
+                            <OptionHeading title="Sélection des viandes" required meta={`${currentMeatTotal}/${maxMeatLimit}`} />
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {listViandes.map(vObj => {
+                                const count = selectedViandes[vObj.name] || 0;
+                                const canAddMore = !isMeatMaxReached || count > 0;
+
+                                return (
+                                  <div
+                                    key={vObj.id}
+                                    className={`flex items-center justify-between gap-3 rounded-lg py-2 pl-3 pr-2 transition-colors ${
+                                      !vObj.inStock ? 'bg-bun opacity-40' : count > 0 ? 'bg-pickle-light' : 'bg-bun'
+                                    }`}
+                                  >
+                                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                      <span className="text-sm font-semibold">{vObj.name}</span>
+                                      {!vObj.inStock && <RuptureBadge />}
+                                      <ExtraPrice price={vObj.price} />
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <StepButton label={`Retirer ${vObj.name}`} disabled={!vObj.inStock || count <= 0} onClick={() => handleViandeCountChange(vObj.name, -1)}>
+                                        <IconMinus className="size-4" />
+                                      </StepButton>
+                                      <Bump value={count} className="inline-block w-6 text-center text-sm font-bold tabular-nums">{count}</Bump>
+                                      <StepButton label={`Ajouter ${vObj.name}`} disabled={!vObj.inStock || !canAddMore} onClick={() => handleViandeCountChange(vObj.name, 1)}>
+                                        <IconPlus className="size-4" />
+                                      </StepButton>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )}
+                        );
+                      })()}
+                    </div>
+                  )}
 
-                    {listViandes.length > 0 && (() => {
-                      const maxMeatLimit = getEffectiveMaxMeatLimit();
-                      const currentMeatTotal = getTotalViandesSelected();
-                      const isMeatMaxReached = currentMeatTotal >= maxMeatLimit;
+                  {hasSauce && listSauces.length > 0 && (() => {
+                    const sauceOverride = articleActif?.group_overrides?.['sauce'];
+                    const sauceTypeInfo = optionTypes.find(t => t.slug === 'sauce');
+                    const maxSauceLimit = sauceOverride?.max_selectable ?? sauceTypeInfo?.max_selectable ?? 1;
+                    const isRequired = sauceOverride?.is_required ?? sauceTypeInfo?.is_required ?? true;
 
-                      return (
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-bold text-white text-xs uppercase">
-                              Sélection des viandes ({currentMeatTotal}/{maxMeatLimit}) <span className="text-emerald-400">*</span>
-                            </h4>
-                          </div>
+                    const currentSauces: string[] = typeof selectedSauce === 'string' && selectedSauce
+                      ? selectedSauce.split(', ').filter(Boolean)
+                      : [];
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {listViandes.map(vObj => {
-                              const count = selectedViandes[vObj.name] || 0;
-                              const canAddMore = !isMeatMaxReached || count > 0;
+                    const totalSaucesCount = currentSauces.length;
 
-                              return (
-                                <div key={vObj.id} className={`flex items-center justify-between p-2.5 bg-[#40342C] border rounded-2xl ${!vObj.inStock ? 'opacity-40 border-neutral-900' : 'border-[#59493E]'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-white">{vObj.name}</span>
-                                    {!vObj.inStock && <RuptureBadge />}
-                                    {vObj.price > 0 && <span className="text-[10px] text-emerald-400 font-bold">+{vObj.price.toFixed(2)} €</span>}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button type="button" disabled={!vObj.inStock || count <= 0} onClick={() => handleViandeCountChange(vObj.name, -1)} className="w-7 h-7 bg-[#4E3F35] border border-[#6B5749] rounded-xl disabled:opacity-35 text-white font-bold">-</button>
-                                    <span className="text-xs font-bold text-white w-4 text-center">{count}</span>
-                                    <button type="button" disabled={!vObj.inStock || !canAddMore} onClick={() => handleViandeCountChange(vObj.name, 1)} className="w-7 h-7 bg-[#4E3F35] border border-[#6B5749] rounded-xl disabled:opacity-35 text-white font-bold">+</button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                    const handleSauceCheckboxChange = (sName: string) => {
+                      const isSelected = currentSauces.includes(sName);
+                      if (isSelected) {
+                        const copy = currentSauces.filter(s => s !== sName);
+                        setSelectedSauce(copy.join(', '));
+                      } else {
+                        if (maxSauceLimit > 0 && totalSaucesCount >= maxSauceLimit) return;
+                        setSelectedSauce([...currentSauces, sName].join(', '));
+                      }
+                    };
 
-                {hasSauce && listSauces.length > 0 && (() => {
-  const sauceOverride = articleActif?.group_overrides?.['sauce'];
-  const sauceTypeInfo = optionTypes.find(t => t.slug === 'sauce');
-  const maxSauceLimit = sauceOverride?.max_selectable ?? sauceTypeInfo?.max_selectable ?? 1;
-  const isRequired = sauceOverride?.is_required ?? sauceTypeInfo?.is_required ?? true;
-  
-  const currentSauces: string[] = typeof selectedSauce === 'string' && selectedSauce 
-    ? selectedSauce.split(', ').filter(Boolean) 
-    : [];
+                    return (
+                      <div>
+                        <OptionHeading title="Choix de la sauce" required={isRequired} meta={`${totalSaucesCount}/${maxSauceLimit}`} />
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {listSauces.map(sObj => {
+                            const isSelected = currentSauces.includes(sObj.name);
+                            const isOutOfStock = !sObj.inStock;
+                            const isDisabled = isOutOfStock || (!isSelected && maxSauceLimit > 0 && totalSaucesCount >= maxSauceLimit);
 
-  const totalSaucesCount = currentSauces.length;
-
-  const handleSauceCheckboxChange = (sName: string) => {
-    const isSelected = currentSauces.includes(sName);
-    if (isSelected) {
-      const copy = currentSauces.filter(s => s !== sName);
-      setSelectedSauce(copy.join(', '));
-    } else {
-      if (maxSauceLimit > 0 && totalSaucesCount >= maxSauceLimit) return;
-      setSelectedSauce([...currentSauces, sName].join(', '));
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center">
-        <h4 className="font-bold text-white text-xs uppercase">
-          Choix de la sauce ({totalSaucesCount}/{maxSauceLimit}) 
-          {isRequired && <span className="text-emerald-400 ml-1">*</span>}
-        </h4>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {listSauces.map(sObj => {
-          const isSelected = currentSauces.includes(sObj.name);
-          const isOutOfStock = !sObj.inStock;
-          const isDisabled = isOutOfStock || (!isSelected && maxSauceLimit > 0 && totalSaucesCount >= maxSauceLimit);
-
-          return (
-            <label 
-              key={sObj.id} 
-              className={`flex items-center justify-between p-3 bg-[#40342C] border rounded-2xl transition ${
-                isOutOfStock ? 'opacity-40 pointer-events-none border-neutral-900' : isDisabled ? 'opacity-50 cursor-not-allowed border-[#59493E]' : 'cursor-pointer'
-              } ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#59493E]'}`}
-            >
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  disabled={isDisabled} 
-                  checked={isSelected} 
-                  onChange={() => handleSauceCheckboxChange(sObj.name)} 
-                  className="accent-emerald-500 rounded" 
-                />
-                <span className="text-xs font-medium text-white">{sObj.name}</span>
-                {isOutOfStock && <RuptureBadge />}
-              </div>
-              {sObj.price > 0 && <span className="text-[10px] text-emerald-400 font-bold">+{sObj.price.toFixed(2)} €</span>}
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
-})()}
-
-                {dynamicAllowedSlugs.map(slug => {
-                  if (slug === 'boisson') return null;
-                  const optionTypeInfo = optionTypes.find(t => t.slug === slug);
-                  const typeOptions = options.filter(o => o.type === slug && !excludedIds.includes(o.id));
-                  if (typeOptions.length === 0) return null;
-
-                  const override = articleActif?.group_overrides?.[slug];
-                  const selectedList = dynamicSelections[slug] || [];
-                  const maxLimit = override?.max_selectable ?? optionTypeInfo?.max_selectable;
-                  const minLimit = override?.is_required !== undefined 
-                    ? (override.is_required ? 1 : 0) 
-                    : (optionTypeInfo?.min_selectable ?? (optionTypeInfo?.is_required ? 1 : 0));
-                  const isMaxReached = maxLimit ? selectedList.length >= maxLimit : false;
-
-                  const groupName = optionTypeInfo?.name || slug;
-                  const isCheckboxMode = maxLimit === 1 && !groupName.toLowerCase().includes('supplément');
-
-                  return (
-                    <div key={slug}>
-                      <h4 className="font-bold text-white text-xs uppercase mb-2 flex items-center justify-between">
-                        <span>{groupName} {minLimit > 0 && <span className="text-emerald-400">*</span>}</span>
-                        <span className="text-[10px] text-[#CBC0B4] font-normal">{minLimit > 0 ? `(min: ${minLimit}) ` : ''}{maxLimit ? `(max: ${maxLimit})` : ''}</span>
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {typeOptions.map(opt => {
-                          const isSelected = selectedList.includes(opt.name);
-                          const isOutOfStock = !opt.inStock;
-                          const isDisabled = isOutOfStock || (!isCheckboxMode && isMaxReached && !isSelected);
-                          
-                          if (isCheckboxMode) {
                             return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                disabled={isOutOfStock}
-                                onClick={() => handleDynamicCheckboxChange(slug, opt.name, true)}
-                                className={`flex items-center justify-between p-3 rounded-2xl border text-left transition ${
-                                  isOutOfStock ? 'opacity-40 pointer-events-none border-neutral-900 bg-[#40342C] text-neutral-500' : isSelected ? 'border-emerald-500 bg-emerald-500/15 text-white' : 'border-[#59493E] bg-[#40342C] text-[#F5F0E8]'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-medium">{opt.name}</span>
+                              <label key={sObj.id} className={optionRow({ selected: isSelected, disabled: isDisabled, outOfStock: isOutOfStock })}>
+                                <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                                  <input
+                                    type="checkbox"
+                                    disabled={isDisabled}
+                                    checked={isSelected}
+                                    onChange={() => handleSauceCheckboxChange(sObj.name)}
+                                    className="flat-check"
+                                  />
+                                  <span className="text-sm font-semibold">{sObj.name}</span>
                                   {isOutOfStock && <RuptureBadge />}
-                                </div>
-                                {opt.price > 0 && <span className="text-[10px] text-emerald-400 font-bold">+{opt.price.toFixed(2)} €</span>}
-                              </button>
+                                </span>
+                                <ExtraPrice price={sObj.price} />
+                              </label>
                             );
-                          }
-
-                          return (
-                            <label key={opt.id} className={`flex items-center justify-between p-3 bg-[#40342C] border rounded-2xl ${isDisabled ? 'opacity-40 pointer-events-none border-neutral-900' : 'cursor-pointer'} ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#59493E]'}`}>
-                              <div className="flex items-center gap-2">
-                                <input type="checkbox" disabled={isDisabled} checked={isSelected} onChange={() => handleDynamicCheckboxChange(slug, opt.name, false)} className="accent-emerald-500 rounded" />
-                                <span className="text-xs font-medium text-white">{opt.name}</span>
-                                {isOutOfStock && <RuptureBadge />}
-                              </div>
-                              {opt.price > 0 && <span className="text-[10px] text-emerald-400 font-bold">+{opt.price.toFixed(2)} €</span>}
-                            </label>
-                          );
-                        })}
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })()}
 
-                {hasMenuOption && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-white text-xs uppercase">
-                          Passer en Menu {articleActif?.menu_required && <span className="text-emerald-400">*</span>}
-                        </h4>
-                        {Number(articleActif?.menu_price || 0) > 0 && (
-                          <span className="text-xs text-emerald-400 font-bold">
-                            (+{Number(articleActif.menu_price).toFixed(2)} €)
-                          </span>
-                        )}
-                      </div>
-                      <input type="checkbox" checked={isMenu} onChange={(e) => { setIsMenu(e.target.checked); if (!e.target.checked) setSelectedBoisson(""); }} className="w-4 h-4 accent-emerald-500 cursor-pointer" />
-                    </div>
+                  {dynamicAllowedSlugs.map(slug => {
+                    if (slug === 'boisson') return null;
+                    const optionTypeInfo = optionTypes.find(t => t.slug === slug);
+                    const typeOptions = options.filter(o => o.type === slug && !excludedIds.includes(o.id));
+                    if (typeOptions.length === 0) return null;
 
-                    {isMenu && (
-                      <div className="mt-3 space-y-2">
-                        <h5 className="text-[11px] text-emerald-400 uppercase font-bold">Choix de la boisson <span className="text-emerald-400">*</span></h5>
-                        {boissonsData.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {boissonsData.map(boisson => {
-                              const isOutOfStock = !boisson.inStock;
+                    const override = articleActif?.group_overrides?.[slug];
+                    const selectedList = dynamicSelections[slug] || [];
+                    const maxLimit = override?.max_selectable ?? optionTypeInfo?.max_selectable;
+                    const minLimit = override?.is_required !== undefined
+                      ? (override.is_required ? 1 : 0)
+                      : (optionTypeInfo?.min_selectable ?? (optionTypeInfo?.is_required ? 1 : 0));
+                    const isMaxReached = maxLimit ? selectedList.length >= maxLimit : false;
+
+                    const groupName = optionTypeInfo?.name || slug;
+                    const isCheckboxMode = maxLimit === 1 && !groupName.toLowerCase().includes('supplément');
+                    const limitsText = [minLimit > 0 ? `min ${minLimit}` : '', maxLimit ? `max ${maxLimit}` : ''].filter(Boolean).join(' · ');
+
+                    return (
+                      <div key={slug}>
+                        <OptionHeading title={groupName} required={minLimit > 0} meta={limitsText || undefined} />
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {typeOptions.map(opt => {
+                            const isSelected = selectedList.includes(opt.name);
+                            const isOutOfStock = !opt.inStock;
+                            const isDisabled = isOutOfStock || (!isCheckboxMode && isMaxReached && !isSelected);
+
+                            if (isCheckboxMode) {
                               return (
-                                <label key={boisson.id} className={`flex items-center justify-between p-3 bg-[#40342C] border rounded-2xl ${isOutOfStock ? 'opacity-40 pointer-events-none border-neutral-900' : 'cursor-pointer border-[#59493E]'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <input type="radio" disabled={isOutOfStock} name="boissonChoice" checked={selectedBoisson === boisson.name} onChange={() => setSelectedBoisson(boisson.name)} className="accent-emerald-500" />
-                                    <span className="text-xs font-medium text-white">{boisson.name}</span>
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  disabled={isOutOfStock}
+                                  aria-pressed={isSelected}
+                                  onClick={() => handleDynamicCheckboxChange(slug, opt.name, true)}
+                                  className={`flex items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors ${
+                                    isOutOfStock ? 'pointer-events-none bg-bun opacity-40' : isSelected ? 'bg-pickle text-white' : 'bg-bun text-grill hover:bg-sesame'
+                                  }`}
+                                >
+                                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                    {isSelected && <IconCheck className="size-4 shrink-0" strokeWidth={3} />}
+                                    <span className="text-sm font-semibold">{opt.name}</span>
                                     {isOutOfStock && <RuptureBadge />}
-                                  </div>
-                                  {boisson.price > 0 && <span className="text-[10px] text-emerald-400 font-bold">+{boisson.price.toFixed(2)} €</span>}
-                                </label>
+                                  </span>
+                                  <ExtraPrice price={opt.price} inverted={isSelected} />
+                                </button>
                               );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-orange-400">Aucune boisson disponible.</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                            }
 
-            {isFormValid ? (
-              <button onClick={addToCart} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white font-black text-xs uppercase py-4 rounded-2xl shadow-lg">
-                Ajouter au panier ({calculateUnitConfigPrice.toFixed(2)} €)
-              </button>
-            ) : (
-              <div className="text-center text-xs text-[#CBC0B4] font-bold py-2">
-                Veuillez compléter tous les choix obligatoires (marqués d&apos;un *) pour continuer.
-              </div>
-            )}
+                            return (
+                              <label key={opt.id} className={optionRow({ selected: isSelected, outOfStock: isDisabled })}>
+                                <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                                  <input type="checkbox" disabled={isDisabled} checked={isSelected} onChange={() => handleDynamicCheckboxChange(slug, opt.name, false)} className="flat-check" />
+                                  <span className="text-sm font-semibold">{opt.name}</span>
+                                  {isOutOfStock && <RuptureBadge />}
+                                </span>
+                                <ExtraPrice price={opt.price} />
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {hasMenuOption && (
+                    <div className="rounded-xl bg-bun p-4">
+                      <label className="flex cursor-pointer items-center justify-between gap-4">
+                        <span className="flex items-center gap-3">
+                          <span className={`grid size-10 shrink-0 place-items-center rounded-lg bg-cheddar text-espresso transition-transform duration-300 ease-spring ${isMenu ? '-rotate-12 scale-110' : ''}`}>
+                            <IconCup className="size-5" />
+                          </span>
+                          <span>
+                            <span className="block text-xs font-bold uppercase tracking-[0.12em]">
+                              Passer en Menu
+                              {articleActif?.menu_required && <RequiredMark />}
+                            </span>
+                            {Number(articleActif?.menu_price || 0) > 0 && (
+                              <span className="mt-0.5 block text-sm font-bold text-pickle-ink tabular-nums">
+                                +{Number(articleActif.menu_price).toFixed(2)} €
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <input type="checkbox" checked={isMenu} onChange={(e) => { setIsMenu(e.target.checked); if (!e.target.checked) setSelectedBoisson(""); }} className="flat-switch" />
+                      </label>
+
+                      {isMenu && (
+                        <div className="mt-4 border-t border-sesame-dark pt-4">
+                          <OptionHeading title="Choix de la boisson" required />
+                          {boissonsData.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              {boissonsData.map(boisson => {
+                                const isOutOfStock = !boisson.inStock;
+                                const isSelected = selectedBoisson === boisson.name;
+                                return (
+                                  <label
+                                    key={boisson.id}
+                                    className={`flex items-center justify-between gap-2 rounded-lg px-3 py-3 transition-colors ${
+                                      isOutOfStock ? 'pointer-events-none bg-crumb opacity-40' : isSelected ? 'cursor-pointer bg-pickle-light' : 'cursor-pointer bg-crumb hover:bg-sesame'
+                                    }`}
+                                  >
+                                    <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                                      <input type="radio" disabled={isOutOfStock} name="boissonChoice" checked={isSelected} onChange={() => setSelectedBoisson(boisson.name)} className="flat-check" />
+                                      <span className="text-sm font-semibold">{boisson.name}</span>
+                                      {isOutOfStock && <RuptureBadge />}
+                                    </span>
+                                    <ExtraPrice price={boisson.price} />
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-semibold text-cheddar-ink">Aucune boisson disponible.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-sesame px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
+              {isFormValid ? (
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="btn btn-ketchup flex w-full animate-rise py-4 text-sm uppercase tracking-[0.06em]"
+                >
+                  <IconPlus className="size-4" />
+                  Ajouter au panier ({calculateUnitConfigPrice.toFixed(2)} €)
+                </button>
+              ) : (
+                <p className="flex items-center justify-center gap-2 py-2 text-center text-xs font-semibold text-grill-soft">
+                  <IconInfo className="size-4 shrink-0" />
+                  Veuillez compléter tous les choix obligatoires (marqués d&apos;un *) pour continuer.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {isCartOpen && (
-        <div onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-end">
-          <div onClick={(e) => e.stopPropagation()} className="bg-[#372D26] border-l border-[#59493E] w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto">
-            <div>
-              <div className="flex justify-between items-center border-b border-[#59493E] pb-4 mb-6">
-                <h3 className="text-xl font-black text-white">Votre Panier</h3>
-                <button onClick={() => setIsCartOpen(false)} className="bg-[#4E3F35] hover:bg-[#5E4C40] text-white rounded-full w-9 h-9 flex items-center justify-center font-bold">✕</button>
-              </div>
+        <div onClick={() => setIsCartOpen(false)} className="fixed inset-0 z-50 flex animate-fade-in justify-end bg-scrim/70">
+          <aside
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-title"
+            className="flex h-full w-full max-w-md animate-slide-in flex-col overflow-y-auto overscroll-contain bg-crumb"
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-sesame bg-crumb px-6 py-5">
+              <h3 id="cart-title" className="flex items-center gap-3 font-display text-3xl uppercase leading-none">
+                Votre panier
+                {cartCount > 0 && (
+                  <Bump value={cartCount} className="grid h-6 min-w-6 place-items-center rounded-md bg-cheddar px-1.5 font-sans text-xs font-black text-espresso tabular-nums [font-stretch:100%]">
+                    {cartCount}
+                  </Bump>
+                )}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                aria-label="Fermer le panier"
+                className="group grid size-10 shrink-0 place-items-center rounded-lg bg-bun text-grill transition duration-200 hover:bg-sesame active:scale-90"
+              >
+                <IconX className="size-5 transition-transform duration-300 ease-spring group-hover:rotate-90" />
+              </button>
+            </div>
 
+            <div className="flex-1 space-y-3 px-6 py-5">
               {cart.length === 0 ? (
-                <div className="text-center py-20 text-[#CBC0B4] font-bold text-base">Votre panier est vide</div>
+                <div className="flex flex-col items-center gap-4 py-20 text-center">
+                  <span className="grid size-16 place-items-center rounded-2xl bg-bun text-grill-soft">
+                    <IconBag className="size-8" />
+                  </span>
+                  <p className="text-base font-bold text-grill-soft">Votre panier est vide</p>
+                </div>
               ) : (
-                cart.map((item) => {
+                cart.map((item, index) => {
                   return (
-                    <div key={item.cartItemId} className="bg-[#40342C] border border-[#59493E] p-4 rounded-2xl relative space-y-2 mb-3">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-bold text-white text-sm">{item.name}</h4>
-                        <span className="font-black text-emerald-400 text-sm">{item.finalPrice.toFixed(2)} €</span>
+                    <div
+                      key={item.cartItemId}
+                      className="animate-rise space-y-3 rounded-xl bg-bun p-4"
+                      style={{ animationDelay: `${Math.min(index, 6) * 50 + 120}ms` }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h4 className="font-bold leading-snug">{item.name}</h4>
+                        <span className="shrink-0 font-display text-xl leading-none tabular-nums">{item.finalPrice.toFixed(2)} €</span>
                       </div>
-                      
-                      <div className="text-[11px] text-[#F5F0E8] space-y-0.5 pt-1 border-t border-[#59493E]">
+
+                      <div className="space-y-0.5 text-xs leading-relaxed text-grill-soft">
                         {!item.nombreViandes && !item.selectedSauce && (!item.dynamicSelections || Object.keys(item.dynamicSelections).length === 0) && !item.isMenu && (
-                          <p className="text-[#CBC0B4] italic">Article standard</p>
+                          <p className="italic">Article standard</p>
                         )}
                         {item.nombreViandes && (
                           <p>
-                            <span className="font-bold text-white">Viandes ({item.nombreViandes}) :</span>{' '}
+                            <span className="font-semibold text-grill">Viandes ({item.nombreViandes}) :</span>{' '}
                             {Object.entries(item.selectedViandes || {}).map(([k, v]) => `${v}x ${k}`).join(', ')}
                           </p>
                         )}
                         {item.nombreGalettes && item.nombreGalettes !== "1" && (
-                          <p><span className="font-bold text-white">Galettes :</span> {item.nombreGalettes} Galettes</p>
+                          <p><span className="font-semibold text-grill">Galettes :</span> {item.nombreGalettes} Galettes</p>
                         )}
                         {item.selectedSauce && (
-                          <p><span className="font-bold text-white">Sauce :</span> {item.selectedSauce}</p>
+                          <p><span className="font-semibold text-grill">Sauce :</span> {item.selectedSauce}</p>
                         )}
                         {item.dynamicSelections && Object.entries(item.dynamicSelections).map(([slug, values]) => {
                           if (!values || values.length === 0) return null;
                           const typeInfo = optionTypes.find(t => t.slug === slug);
                           return (
                             <p key={slug}>
-                              <span className="font-bold text-white">{typeInfo?.name || slug} :</span> {values.join(', ')}
+                              <span className="font-semibold text-grill">{typeInfo?.name || slug} :</span> {values.join(', ')}
                             </p>
                           );
                         })}
                         {item.isMenu && (
-                          <p className="text-emerald-400 font-semibold pt-0.5">
-                            📦 Menu {item.boisson ? `+ Boisson (${item.boisson})` : ''}
+                          <p className="flex items-center gap-1.5 pt-1 font-semibold text-pickle-ink">
+                            <IconCup className="size-3.5" />
+                            Menu {item.boisson ? `+ Boisson (${item.boisson})` : ''}
                           </p>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-[#59493E]/60">
-                        <div className="flex items-center gap-2">
-                          <button type="button" onClick={() => updateCartItemQuantity(item.cartItemId, -1)} className="w-6 h-6 bg-[#4E3F35] border border-[#6B5749] rounded-lg text-xs font-bold text-white">-</button>
-                          <span className="text-xs font-bold text-white w-4 text-center">{item.quantity}</span>
-                          <button type="button" onClick={() => updateCartItemQuantity(item.cartItemId, 1)} className="w-6 h-6 bg-[#4E3F35] border border-[#6B5749] rounded-lg text-xs font-bold text-white">+</button>
+                      <div className="flex items-center justify-between border-t border-sesame-dark/60 pt-3">
+                        <div className="flex items-center gap-1">
+                          <StepButton label={`Diminuer la quantité de ${item.name}`} onClick={() => updateCartItemQuantity(item.cartItemId, -1)}>
+                            <IconMinus className="size-4" />
+                          </StepButton>
+                          <Bump value={item.quantity} className="inline-block w-7 text-center text-sm font-bold tabular-nums">{item.quantity}</Bump>
+                          <StepButton label={`Augmenter la quantité de ${item.name}`} onClick={() => updateCartItemQuantity(item.cartItemId, 1)}>
+                            <IconPlus className="size-4" />
+                          </StepButton>
                         </div>
-                        <button onClick={() => removeFromCart(item.cartItemId)} className="text-red-400 hover:text-red-300 text-xs font-bold">Supprimer</button>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(item.cartItemId)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-bold text-ketchup-ink transition-colors hover:bg-ketchup-light"
+                        >
+                          <IconTrash className="size-4" />
+                          Supprimer
+                        </button>
                       </div>
                     </div>
                   );
@@ -1080,70 +1331,132 @@ export default function PageCommander() {
               )}
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-[#59493E]">
-              {cart.length > 0 && (
-                <>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[11px] font-bold uppercase text-[#CBC0B4]">Note pour la commande</label>
-                      <span className={`text-[10px] font-bold ${orderNote.length >= 80 ? 'text-red-400' : 'text-[#CBC0B4]'}`}>{orderNote.length}/80</span>
-                    </div>
-                    <textarea placeholder="Ex: Sans oignons..." maxLength={80} rows={2} value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className="w-full bg-[#40342C] border border-[#59493E] rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none" />
+            {cart.length > 0 && (
+              <div className="space-y-5 border-t-2 border-dashed border-sesame-dark px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5">
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label htmlFor="order-note" className="text-xs font-bold uppercase tracking-[0.08em] text-grill-soft">Note pour la commande</label>
+                    <span className={`text-xs font-bold tabular-nums ${orderNote.length >= 80 ? 'text-ketchup-ink' : 'text-grill-soft'}`}>{orderNote.length}/80</span>
                   </div>
+                  <textarea id="order-note" placeholder="Ex: Sans oignons..." maxLength={80} rows={2} value={orderNote} onChange={(e) => setOrderNote(e.target.value)} className={`${inputClass} resize-none`} />
+                </div>
 
-                  <div className="flex justify-between items-center text-sm font-bold">
-                    <span className="text-white">Total :</span>
-                    <span className="text-emerald-400 text-base font-black">{getTotalCartPrice().toFixed(2)} €</span>
+                <div className="flex items-end justify-between gap-4">
+                  <span className="text-sm font-bold uppercase tracking-[0.1em]">Total</span>
+                  <Bump value={cartTotal} className="inline-block origin-right font-display text-4xl leading-none tabular-nums">{cartTotal.toFixed(2)} €</Bump>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-pickle-ink">Vos Coordonnées</h4>
+                  <div>
+                    <label htmlFor="customer-name" className={labelClass}>Prénom</label>
+                    <input id="customer-name" type="text" autoComplete="given-name" placeholder="Votre prénom" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className={inputClass} />
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase text-emerald-400">Vos Coordonnées</h4>
-                    <input type="text" placeholder="PRÉNOM" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full bg-[#40342C] border border-[#59493E] rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500" />
-                    <input type="tel" placeholder="Téléphone (10 chiffres, ex: 0612345678)" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} className="w-full bg-[#40342C] border border-[#59493E] rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500" />
+                  <div>
+                    <label htmlFor="customer-phone" className={labelClass}>Téléphone (10 chiffres)</label>
+                    <input id="customer-phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ex : 0612345678" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} className={`${inputClass} tabular-nums`} />
                   </div>
+                </div>
 
-                  {IS_DEMO && (
-                    <p className="bg-sky-400/10 border border-sky-400/40 text-sky-200 text-[11px] leading-relaxed rounded-2xl p-3">
-                      <strong className="text-sky-300">Mode démo :</strong> cette commande est simulée. Elle ne sera pas envoyée au restaurant et aucun paiement ne sera demandé.
-                    </p>
-                  )}
+                {IS_DEMO && (
+                  <p className="rounded-lg bg-cheddar-light px-4 py-3 text-xs leading-relaxed text-grill">
+                    <strong>Mode démo :</strong> cette commande est simulée. Elle ne sera pas envoyée au restaurant et aucun paiement ne sera demandé.
+                  </p>
+                )}
 
-                  <button disabled={isSubmitting} onClick={handleValidateOrder} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white font-black text-xs uppercase py-4 rounded-2xl shadow-lg disabled:opacity-50">
-                    {isSubmitting ? "Validation..." : IS_DEMO ? "Simuler la commande (démo)" : "Procéder au paiement"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleValidateOrder}
+                  className="btn btn-ketchup flex w-full py-4 text-sm uppercase tracking-[0.06em] disabled:cursor-wait"
+                >
+                  {isSubmitting && <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}
+                  {isSubmitting ? "Validation..." : IS_DEMO ? "Simuler la commande (démo)" : "Procéder au paiement"}
+                </button>
+              </div>
+            )}
+          </aside>
         </div>
       )}
 
       {orderSuccessModal.isOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#372D26] border border-[#59493E] w-full max-w-sm rounded-3xl p-6 text-center space-y-5 shadow-2xl">
-            <div className="relative w-20 h-20 mx-auto overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg animate-bounce">
-              <Image src={withBasePath('/logo.png')} alt="Logo Chicken" fill className="object-cover" />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="success-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div className="absolute inset-0 animate-fade-in bg-scrim/70" aria-hidden="true" />
+          <div className="relative w-full max-w-sm animate-rise overflow-hidden rounded-2xl bg-crumb text-center">
+            <div className="relative overflow-hidden bg-pickle px-6 pb-7 pt-8 text-white">
+              <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                {CONFETTI.map((piece, i) => (
+                  <span
+                    key={i}
+                    className="confetti"
+                    style={{
+                      background: piece.color,
+                      borderRadius: piece.round ? '999px' : '2px',
+                      '--x': piece.x,
+                      '--y': piece.y,
+                      '--r': piece.r,
+                      '--d': piece.d,
+                    } as React.CSSProperties}
+                  />
+                ))}
+              </div>
+              <span className="relative mx-auto grid size-14 animate-pop place-items-center rounded-full bg-white text-pickle [animation-delay:120ms]">
+                <IconCheck className="draw-check size-7" strokeWidth={3} />
+              </span>
+              <h3 id="success-title" className="relative mt-4 animate-rise font-display text-4xl uppercase leading-[0.95] [animation-delay:200ms]">
+                {IS_DEMO ? "Commande simulée !" : "Merci pour votre commande !"}
+              </h3>
             </div>
-            {IS_DEMO ? (
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white">Commande simulée !</h3>
-                <p className="text-[#F5F0E8] text-sm">Ceci est une <strong className="text-sky-300">démonstration</strong> : aucune commande n&apos;a été envoyée au restaurant et aucun paiement n&apos;a été effectué.</p>
+            <div className="space-y-5 p-6">
+              <div className="animate-rise rounded-xl border-2 border-dashed border-sesame-dark bg-bun px-4 py-4 [animation-delay:320ms]">
+                <p className="text-sm text-grill-soft">Votre numéro de commande est le</p>
+                <p className="mt-1.5 font-display text-5xl uppercase leading-none tabular-nums">{orderSuccessModal.orderNumber}</p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white">Merci pour votre commande !</h3>
-                <p className="text-[#F5F0E8] text-sm">Votre numéro de commande est le <span className="font-black text-emerald-400">{orderSuccessModal.orderNumber}</span></p>
-              </div>
-            )}
-            <div className="pt-2 space-y-2">
-              {!IS_DEMO && (
-                <button onClick={() => router.push(`/suivi?order=${orderSuccessModal.orderNumber}`)} className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xs uppercase py-3.5 rounded-2xl shadow-lg">Suivre votre commande</button>
+              {IS_DEMO && (
+                <p className="animate-rise text-xs leading-relaxed text-grill-soft [animation-delay:370ms]">
+                  Ceci est une <strong className="text-grill">démonstration</strong> : rien n&apos;a été envoyé au restaurant. Le suivi fonctionne quand même, la commande passe « prête » au bout d&apos;une minute.
+                </p>
               )}
-              <button onClick={() => setOrderSuccessModal({ isOpen: false, orderNumber: '' })} className="w-full bg-[#4E3F35] text-[#CBC0B4] font-bold text-xs py-2.5 rounded-2xl">Fermer</button>
+              <div className="animate-rise space-y-2 [animation-delay:420ms]">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/suivi?order=${orderSuccessModal.orderNumber}`)}
+                  className="btn btn-ketchup flex w-full py-3.5 text-sm uppercase tracking-[0.06em]"
+                >
+                  Suivre votre commande
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderSuccessModal({ isOpen: false, orderNumber: '' })}
+                  className="w-full rounded-lg bg-bun py-3 text-sm font-bold text-grill-soft transition duration-200 hover:bg-sesame active:scale-[0.98]"
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-    </main>
+
+      {toast && (
+        <div
+          key={toast.id}
+          role="status"
+          className={`pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4 ${showCartBar ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
+        >
+          <p className="flex animate-rise items-center gap-3 rounded-xl bg-grill py-2.5 pl-2.5 pr-5 text-sm font-semibold text-bun">
+            <span className="grid size-7 animate-pop place-items-center rounded-lg bg-pickle text-white [animation-delay:120ms]">
+              <IconCheck className="size-4" strokeWidth={3} />
+            </span>
+            {toast.text}
+          </p>
+        </div>
+      )}
+    </>
   );
 }

@@ -1,52 +1,394 @@
 @import "tailwindcss";
 
-:root {
-  --background: #40342C;
-  --foreground: #FAF6F0;
+/*
+  Palette Chicken Burger — Flat Design : aplats, pas de dégradés ni d'ombres floues.
+  Les jetons "bun / crumb / sesame / grill" s'inversent en mode sombre ;
+  "espresso / cream / scrim" restent fixes (surfaces toujours sombres, texte sur orange).
+*/
+@theme {
+  --color-grill: #40342c;
+  --color-grill-deep: #2e251f;
+  --color-grill-soft: #6e5c4e;
+  --color-bun: #f3eadb;
+  --color-crumb: #fffbf5;
+  --color-sesame: #e8dac4;
+  --color-sesame-dark: #d5c2a5;
+
+  --color-espresso: #2e251f;
+  --color-espresso-line: #40342c;
+  --color-cream: #f3eadb;
+  --color-cream-muted: #d5c2a5;
+  --color-scrim: #2e251f;
+
+  --color-pickle: #1d8452;
+  --color-pickle-dark: #166b42;
+  --color-pickle-light: #d9eee0;
+  --color-pickle-ink: #166b42;
+  --color-ketchup: #d63f2a;
+  --color-ketchup-dark: #b5311f;
+  --color-ketchup-light: #f8ddd6;
+  --color-ketchup-ink: #b5311f;
+  --color-cheddar: #f08c22;
+  --color-cheddar-dark: #c96f12;
+  --color-cheddar-light: #fce5c8;
+  --color-cheddar-ink: #a65a0b;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-fade-in: fade-in 180ms ease-out both;
+  --animate-rise: rise 420ms var(--ease-snappy) both;
+  --animate-slide-in: slide-in 320ms var(--ease-snappy) both;
+  --animate-line-up: line-up 800ms var(--ease-snappy) both;
+  --animate-pop: pop 520ms var(--ease-spring) both;
+  --animate-bump: bump 380ms var(--ease-spring);
+  --animate-wiggle: wiggle 600ms ease-in-out;
+  --animate-shake: shake 500ms ease-in-out both;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-drop-in: drop-in 700ms var(--ease-snappy) both;
+  --animate-photo-in: photo-in 900ms var(--ease-snappy) both;
+  --animate-grow-x: grow-x 700ms var(--ease-snappy) both;
+  --animate-menu-down: menu-down 260ms var(--ease-snappy) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(100%); }
+  }
+  @keyframes line-up {
+    from { transform: translateY(105%); }
+  }
+  @keyframes pop {
+    0% { opacity: 0; transform: scale(0.3) rotate(-35deg); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    20% { transform: rotate(-16deg); }
+    40% { transform: rotate(13deg); }
+    60% { transform: rotate(-8deg); }
+    80% { transform: rotate(4deg); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(2px); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes drop-in {
+    from { opacity: 0; transform: translate(-14px, -14px); }
+  }
+  @keyframes photo-in {
+    from { opacity: 0; clip-path: inset(12% 12% 12% 12% round 1rem); transform: scale(1.04); }
+    to { opacity: 1; clip-path: inset(0 0 0 0 round 1rem); transform: none; }
+  }
+  @keyframes grow-x {
+    from { transform: scaleX(0); }
+  }
+  @keyframes menu-down {
+    from { opacity: 0; transform: translateY(-8px); }
+  }
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Mode sombre : suit le réglage de l'appareil. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #40342C;
-    --foreground: #FAF6F0;
+    color-scheme: dark;
+
+    --color-grill: #f3eadb;
+    --color-grill-deep: #e0d2bd;
+    --color-grill-soft: #c2b3a1;
+    --color-bun: #2a221d;
+    --color-crumb: #372d26;
+    --color-sesame: #4a3d34;
+    --color-sesame-dark: #5e4e42;
+
+    --color-espresso: #1c1714;
+    --color-espresso-line: #2f2621;
+    --color-scrim: #0c0907;
+
+    --color-pickle-light: #1f3b2c;
+    --color-pickle-ink: #86d4a8;
+    --color-ketchup-light: #4a231c;
+    --color-ketchup-ink: #f4a092;
+    --color-cheddar-light: #4a3319;
+    --color-cheddar-ink: #f5b366;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+/* Titres condensés façon tableau de menu (axe de largeur d'Archivo). */
+@utility font-display {
+  font-stretch: 70%;
+  font-weight: 800;
+  letter-spacing: -0.005em;
 }
 
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.animate-gradient-shift {
-  animation: gradientShift 4s ease infinite;
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--color-bun);
+    color: var(--color-grill);
+    font-family: var(--font-sans);
+    transition: background-color 300ms, color 300ms;
+  }
+
+  ::selection {
+    background: var(--color-cheddar);
+    color: var(--color-espresso);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cheddar-dark);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
-@keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@layer components {
+  /* Boutons à plat avec relief au survol : le bouton se lève et révèle une tranche pleine. */
+  .btn {
+    --edge: var(--color-grill-deep);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    box-shadow: 0 0 0 0 var(--edge);
+    transition:
+      background-color 200ms,
+      color 200ms,
+      translate 200ms var(--ease-snappy),
+      scale 120ms var(--ease-snappy),
+      box-shadow 200ms var(--ease-snappy);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:not(:disabled):hover {
+      translate: 0 -3px;
+      box-shadow: 0 3px 0 0 var(--edge);
+    }
+  }
+  .btn:not(:disabled):active {
+    translate: 0 0;
+    scale: 0.97;
+    box-shadow: 0 0 0 0 var(--edge);
+  }
+  .btn-ketchup {
+    --edge: var(--color-ketchup-dark);
+    background: var(--color-ketchup);
+    color: #fff;
+  }
+  .btn-pickle {
+    --edge: var(--color-pickle-dark);
+    background: var(--color-pickle);
+    color: #fff;
+  }
+  .btn-cheddar {
+    --edge: var(--color-cheddar-dark);
+    background: var(--color-cheddar);
+    color: var(--color-espresso);
+  }
+  .btn-grill {
+    --edge: var(--color-grill-deep);
+    background: var(--color-grill);
+    color: var(--color-bun);
+  }
+
+  /* Case à cocher / bouton radio à plat */
+  .flat-check {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--color-grill-soft);
+    border-radius: 6px;
+    background: var(--color-crumb);
+    cursor: pointer;
+    transition: background-color 150ms, border-color 150ms, scale 150ms var(--ease-spring);
+  }
+  .flat-check::before {
+    content: "";
+    width: 0.7rem;
+    height: 0.7rem;
+    background: #fff;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transform: scale(0) rotate(-20deg);
+    transition: transform 260ms var(--ease-spring);
+  }
+  .flat-check:checked {
+    background: var(--color-pickle);
+    border-color: var(--color-pickle);
+  }
+  .flat-check:checked::before {
+    transform: scale(1) rotate(0);
+  }
+  .flat-check:not(:disabled):active {
+    scale: 0.85;
+  }
+  .flat-check[type="radio"] {
+    border-radius: 999px;
+  }
+  .flat-check[type="radio"]::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    clip-path: circle(50%);
+  }
+  .flat-check:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  /* Interrupteur à plat */
+  .flat-switch {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: var(--color-sesame-dark);
+    cursor: pointer;
+    transition: background-color 200ms;
+  }
+  .flat-switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    background: #fff;
+    transition: transform 340ms var(--ease-spring);
+  }
+  .flat-switch:checked {
+    background: var(--color-pickle);
+  }
+  .flat-switch:checked::before {
+    transform: translateX(1.25rem);
+  }
+
+  /* Lien souligné qui se dessine au survol */
+  .link-grow {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 2px;
+    transition: background-size 280ms var(--ease-snappy), color 200ms;
+  }
+  .link-grow:hover {
+    background-size: 100% 2px;
+  }
+
+  /* Coche qui se trace */
+  .draw-check path {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: draw-check 460ms ease-out 280ms forwards;
+  }
+
+  /* Confettis à plat (fenêtre de confirmation de commande) */
+  .confetti {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: confetti 1100ms var(--ease-snappy) var(--d, 0ms) both;
+  }
 }
 
-.animate-gradient {
-  animation: gradient 6s ease infinite;
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+}
+
+@keyframes draw-check {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes confetti {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1) rotate(var(--r)); }
+}
+
+/* Apparition au défilement (navigateurs compatibles, sans JavaScript). */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

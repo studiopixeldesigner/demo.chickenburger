@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
-import { withBasePath } from '@/lib/base-path';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { IS_DEMO } from '@/lib/demo';
+import { IS_DEMO, findDemoOrder } from '@/lib/demo';
+import SiteHeader from '@/app/_components/SiteHeader';
+import SiteFooter from '@/app/_components/SiteFooter';
+import { PageIntro } from '@/app/_components/ui';
+import { IconCheck, IconClock, IconSearch, IconX } from '@/app/_components/icons';
 
 interface OrderTrack {
   id: string;
@@ -33,8 +34,8 @@ function formatTabName(rawKey: string): string {
   }
 
   let formatted = rawKey
-    .replace(/_/g, ' ')                  
-    .replace(/([A-Z])/g, ' $1')          
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
     .trim();
 
@@ -86,11 +87,16 @@ function SuiviContent() {
     if (!cleanQuery) return;
 
     setSearched(true);
+    setLoading(true);
     setOrder(null);
 
-    if (IS_DEMO) return;
-
-    setLoading(true);
+    if (IS_DEMO) {
+      // Démo : on cherche parmi les commandes simulées gardées dans le navigateur.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setOrder(findDemoOrder(cleanQuery));
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -120,8 +126,8 @@ function SuiviContent() {
         };
       });
 
-      const found = allFormattedOrders.find(o => 
-        o.id.toLowerCase() === cleanQuery.toLowerCase() || 
+      const found = allFormattedOrders.find(o =>
+        o.id.toLowerCase() === cleanQuery.toLowerCase() ||
         o.phone === cleanQuery ||
         o.phone.replace(/\s+/g, '') === cleanQuery.replace(/\s+/g, '')
       );
@@ -184,121 +190,156 @@ function SuiviContent() {
   return results.length > 0 ? results : null;
 };
 
+  const isReady = order?.status === 'prete';
+  const steps = [
+    { label: 'Reçue', state: 'done' },
+    { label: 'En préparation', state: isReady ? 'done' : 'active' },
+    { label: 'Prête', state: isReady ? 'done' : 'todo' },
+  ] as const;
+
   return (
-    <main className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
-      <div>
-        <header className="bg-[#372D26]/90 backdrop-blur-md border-b border-[#59493E] p-4 sticky top-0 z-40 flex justify-between items-center px-6 shadow-md">
-          <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-            <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-emerald-500 shadow-lg shadow-emerald-500/20 transform group-hover:scale-110 transition duration-300">
-              <Image src={withBasePath('/logo.png')} alt="Logo" fill className="object-cover" />
+    <>
+      <SiteHeader />
+
+      <main id="contenu" className="flex-1 pb-24">
+        <PageIntro eyebrow="Temps réel" title="Suivi de commande" accent="bg-cheddar">
+          Entrez votre numéro de commande (ex: CMD-001) ou votre numéro de téléphone pour suivre l&apos;avancement en direct.
+        </PageIntro>
+
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <form onSubmit={handleSearch} className="flex max-w-xl flex-col gap-2 sm:flex-row">
+            <label htmlFor="suivi-query" className="sr-only">Numéro de commande ou téléphone</label>
+            <div className="group relative flex-1">
+              <IconSearch className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-grill-soft transition duration-300 ease-spring group-focus-within:scale-110 group-focus-within:text-grill" />
+              <input
+                id="suivi-query"
+                type="text"
+                placeholder="Ex: CMD-001 ou 0612345678"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-14 w-full rounded-lg border-2 border-transparent bg-crumb pl-12 pr-4 text-base text-grill placeholder:text-grill-soft/70 transition-colors focus:border-grill focus:outline-none"
+                required
+              />
             </div>
-            <span className="font-black text-lg tracking-tighter text-white">
-              CHICKEN <span className="text-orange-400">BURGER</span>
-            </span>
-          </Link>
-          <Link href="/" className="bg-[#4E3F35] hover:bg-[#5E4C40] text-white px-4 py-2 rounded-full font-bold text-xs border border-[#6B5749] transition shadow-md">
-            ← Accueil
-          </Link>
-        </header>
-
-        <section className="max-w-xl mx-auto px-6 pt-16 pb-8 text-center">
-          <span className="inline-block bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-4 shadow-sm backdrop-blur-md">
-            Temps réel
-          </span>
-          <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-rose-400 to-amber-400 mb-4 drop-shadow-md">
-            Suivi de commande
-          </h1>
-          <p className="text-[#F5F0E8] text-xs sm:text-sm font-medium">
-            Entrez votre numéro de commande (ex: CMD-001) ou votre numéro de téléphone pour suivre l'avancement en direct.
-          </p>
-        </section>
-
-        <div className="max-w-md mx-auto px-6 mb-12">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input 
-              type="text"
-              placeholder="Ex: CMD-001 ou 0612345678"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-[#372D26]/90 border border-[#59493E] rounded-2xl px-4 py-3 text-sm text-white placeholder-[#CBC0B4] focus:outline-none focus:border-emerald-500 transition shadow-inner"
-              required
-            />
-            <button 
+            <button
               type="submit"
               disabled={loading}
-              className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-500/50 text-white font-bold px-6 py-3 rounded-2xl text-sm transition shadow-lg shadow-orange-600/20"
+              className="btn btn-cheddar h-14 px-8 text-sm uppercase tracking-[0.08em] disabled:cursor-wait"
             >
+              {loading && <span className="size-4 animate-spin rounded-full border-2 border-espresso/30 border-t-espresso" aria-hidden="true" />}
               {loading ? 'Recherche...' : 'Suivre'}
             </button>
           </form>
-        </div>
 
-        {searched && (
-          <div className="max-w-md mx-auto px-6">
-            {order ? (
-              <div className="bg-[#372D26]/90 backdrop-blur-sm border border-[#59493E] rounded-3xl p-6 shadow-xl space-y-6 text-center">
-                <div>
-                  <span className="text-xs text-[#CBC0B4] uppercase tracking-widest font-medium">Commande</span>
-                  <h3 className="text-2xl font-black text-emerald-400">{order.id}</h3>
-                  <p className="text-sm text-white font-semibold">Client : {order.customerName}</p>
-                </div>
+          {IS_DEMO && (
+            <p className="mt-4 max-w-xl rounded-lg bg-cheddar-light px-4 py-3 text-sm leading-relaxed text-grill">
+              <strong>Mode démo :</strong> passez une commande simulée depuis la page Commander, puis suivez-la ici avec son numéro. Elle passe « prête » au bout d&apos;une minute.
+            </p>
+          )}
 
-                <div className="py-4 border-y border-[#59493E] flex flex-col items-center justify-center space-y-3">
-                  {order.status === 'en_preparation' ? (
-                    <div className="bg-amber-500/10 border border-amber-500/35 text-amber-300 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 animate-pulse">
-                      <span>⏳</span> Votre commande est en cours de préparation en cuisine...
+          {searched && (
+            <div className="mt-10 max-w-xl" aria-live="polite">
+              {loading ? (
+                <div className="h-64 animate-pulse rounded-2xl bg-sesame/70" aria-hidden="true" />
+              ) : order ? (
+                <article className="animate-rise overflow-hidden rounded-2xl bg-crumb">
+                  <div className="flex flex-wrap items-end justify-between gap-4 p-6">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-grill-soft">Commande</p>
+                      <h2 className="mt-1 font-display text-5xl uppercase leading-none tabular-nums">{order.id}</h2>
                     </div>
-                  ) : (
-                    <div className="bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2">
-                      <span>🎉</span> Votre commande est prête ! Vous pouvez venir la récupérer.
-                    </div>
-                  )}
-                </div>
+                    <p className="text-sm font-semibold text-grill-soft">Client : <span className="text-grill">{order.customerName}</span></p>
+                  </div>
 
-                <div className="text-left space-y-2">
-                  <h4 className="text-xs font-bold text-[#CBC0B4] uppercase tracking-wider">Récapitulatif :</h4>
-                  <ul className="space-y-3 text-sm text-[#F5F0E8] bg-[#4E3F35]/50 p-4 rounded-xl border border-[#59493E]">
-                    {order.items.map((item, idx) => {
-                      const details = getDynamicItemDetails(item);
-                      return (
-                        <li key={idx} className="flex flex-col gap-1 border-b border-[#59493E] pb-2 last:border-0 last:pb-0">
-                          <div className="flex justify-between font-medium">
-                            <span>{item.quantity}x {item.name}</span>
-                          </div>
-                          {details && details.map((d, dIdx) => (
-                            <p key={dIdx} className="text-xs text-[#CBC0B4] pl-4">
-                              ↳ <span className="font-semibold text-white">{d.key} :</span> {d.val}
+                  <div className={`flex items-center gap-4 px-6 py-5 ${isReady ? 'bg-pickle text-white' : 'bg-cheddar text-espresso'}`}>
+                    <span className={`grid size-11 shrink-0 animate-pop place-items-center rounded-full [animation-delay:200ms] ${isReady ? 'bg-white text-pickle' : 'bg-espresso text-cheddar'}`}>
+                      {isReady ? <IconCheck className="draw-check size-6" strokeWidth={3} /> : <IconClock className="size-6 animate-[spin_6s_linear_infinite]" />}
+                    </span>
+                    <p className="animate-rise font-bold leading-snug [animation-delay:260ms]">
+                      {isReady
+                        ? "Votre commande est prête ! Vous pouvez venir la récupérer."
+                        : "Votre commande est en cours de préparation en cuisine..."}
+                    </p>
+                  </div>
+
+                  <ol className="grid grid-cols-3 gap-2 px-6 pt-6" aria-label="Avancement de la commande">
+                    {steps.map((step, index) => (
+                      <li key={step.label} aria-current={step.state === 'active' ? 'step' : undefined}>
+                        <span className="block h-2 overflow-hidden rounded-full bg-sesame">
+                          {step.state !== 'todo' && (
+                            <span
+                              className="block h-full origin-left animate-grow-x"
+                              style={{ animationDelay: `${350 + index * 220}ms` }}
+                            >
+                              <span className={`block h-full rounded-full ${step.state === 'done' ? 'bg-pickle' : 'animate-pulse bg-cheddar'}`} />
+                            </span>
+                          )}
+                        </span>
+                        <span className={`mt-2 block text-xs font-bold ${step.state === 'todo' ? 'text-grill-soft' : 'text-grill'}`}>
+                          {step.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="p-6">
+                    <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-grill-soft">Récapitulatif</h3>
+                    <ul className="mt-3 rounded-xl bg-bun px-4">
+                      {order.items.map((item, idx) => {
+                        const details = getDynamicItemDetails(item);
+                        return (
+                          <li
+                            key={idx}
+                            className="animate-rise border-b-2 border-dashed border-sesame-dark py-3 last:border-0"
+                            style={{ animationDelay: `${450 + Math.min(idx, 6) * 70}ms` }}
+                          >
+                            <p className="flex items-baseline gap-2 font-semibold">
+                              <span className="font-display text-lg tabular-nums">{item.quantity}x</span>
+                              {item.name}
                             </p>
-                          ))}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            {details && details.map((d, dIdx) => (
+                              <p key={dIdx} className="mt-0.5 pl-7 text-xs text-grill-soft">
+                                <span className="font-semibold text-grill">{d.key} :</span> {d.val}
+                              </p>
+                            ))}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </article>
+              ) : (
+                <div className="flex animate-rise items-start gap-4 rounded-2xl bg-crumb p-6">
+                  <span className="grid size-10 shrink-0 animate-wiggle place-items-center rounded-full bg-ketchup-light text-ketchup-ink [animation-delay:200ms]">
+                    <IconX className="size-5" />
+                  </span>
+                  <p className="text-sm leading-relaxed text-grill-soft">
+                    Aucune commande trouvée pour <strong className="text-grill">&quot;{searchQuery}&quot;</strong>. Vérifiez vos informations.
+                  </p>
                 </div>
-              </div>
-            ) : IS_DEMO ? (
-              <div className="bg-sky-400/10 border border-sky-400/40 rounded-3xl p-6 text-center text-sky-200 text-sm shadow-xl">
-                <strong className="text-sky-300">Mode démo :</strong> le suivi de commande est désactivé sur ce site de démonstration, car aucune commande n&apos;y est réellement passée.
-              </div>
-            ) : (
-              <div className="bg-[#372D26]/90 border border-[#59493E] rounded-3xl p-6 text-center text-[#CBC0B4] text-sm shadow-xl">
-                ❌ Aucune commande trouvée pour <strong className="text-white">"{searchQuery}"</strong>. Vérifiez vos informations.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
 
-      <footer className="bg-[#332922] border-t border-[#59493E] py-6 text-center text-xs text-[#B8ABA0] mt-16 relative z-20">
-        <p>© 2026 Chicken Burger Lure — 34 Rue de la Gare</p>
-      </footer>
-    </main>
+      <SiteFooter />
+    </>
   );
 }
 
 export default function SuiviCommandePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#40342C] text-[#FAF6F0] flex items-center justify-center font-bold text-emerald-400">Chargement...</div>}>
+    <Suspense
+      fallback={
+        <main className="flex min-h-dvh flex-1 items-center justify-center">
+          <p className="flex items-center gap-3 text-sm font-semibold text-grill-soft">
+            <span className="size-2.5 animate-pulse rounded-sm bg-pickle" aria-hidden="true" />
+            Chargement...
+          </p>
+        </main>
+      }
+    >
       <SuiviContent />
     </Suspense>
   );
