@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { withBasePath } from '@/lib/base-path';
 import { IS_DEMO, useDemoOuvert } from '@/lib/demo';
-import SiteHeader from '@/app/_components/SiteHeader';
+import SiteHeader, { PHONE_DISPLAY, PHONE_HREF } from '@/app/_components/SiteHeader';
 import SiteFooter from '@/app/_components/SiteFooter';
-import { IconArrowRight, IconBadgeCheck, IconBurger, IconLock, IconMapPin, IconReceipt } from '@/app/_components/icons';
+import { IconArrowRight, IconBurger, IconLock, IconMapPin, IconPhone, IconReceipt } from '@/app/_components/icons';
 
 export default function VitrineClient() {
   const [estOuvert, setEstOuvert] = useState<boolean | null>(null);
@@ -251,19 +251,23 @@ export default function VitrineClient() {
               </span>
             </Link>
 
-            <Link
-              href="/provenance-viandes"
+            <a
+              href={PHONE_HREF}
+              aria-label={`Appeler Chicken Burger au ${PHONE_DISPLAY}`}
               className="group reveal flex min-h-44 flex-col justify-between gap-6 rounded-2xl bg-grill p-7 text-bun transition-[translate] duration-300 ease-snappy hover:-translate-y-1.5 md:col-span-5"
             >
-              <IconBadgeCheck className="size-7 text-cheddar transition-transform duration-500 ease-spring group-hover:rotate-[20deg] group-hover:scale-125" />
+              <span className="flex items-center justify-between gap-4">
+                <IconPhone className="size-7 text-cheddar group-hover:animate-wiggle" />
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-sesame-dark">Appeler le restaurant</span>
+              </span>
               <span>
-                <span className="flex items-center justify-between gap-4 font-display text-3xl uppercase leading-none">
-                  Provenance des viandes
+                <span className="flex items-center justify-between gap-4 font-display text-4xl leading-none tabular-nums sm:text-5xl">
+                  {PHONE_DISPLAY}
                   <IconArrowRight className="size-6 shrink-0 transition-transform duration-300 ease-spring group-hover:translate-x-1.5" />
                 </span>
-                <span className="mt-2 block text-sm text-sesame-dark">Origine France, Pologne, Allemagne. Certifiées Halal.</span>
+                <span className="mt-2 block text-sm text-sesame-dark">Une question sur la carte ou sur votre commande ? Appelez‑nous.</span>
               </span>
-            </Link>
+            </a>
           </div>
         </section>
       </main>
